@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.next/
+.env
+.env.local
+*.log
+pgdata/
+.DS_Store
+.cursor/
+local-data/
+evidence/

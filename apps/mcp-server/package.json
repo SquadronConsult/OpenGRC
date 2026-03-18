@@ -1,0 +1,13 @@
+{
+  "name": "@grc/mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.mjs",
+    "smoke": "node ../../scripts/mcp-smoke.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0"
+  }
+}

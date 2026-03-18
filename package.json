@@ -1,0 +1,30 @@
+{
+  "name": "open-grc-fedramp",
+  "private": true,
+  "scripts": {
+    "dev:api": "cd apps/api && npm run start:dev",
+    "dev:web": "cd apps/web && npm run dev",
+    "dev:mcp": "cd apps/mcp-server && npm run start",
+    "dev:desktop": "cd apps/desktop && npm run start",
+    "build": "cd apps/api && npm run build && cd ../web && npm run build",
+    "build:desktop": "cd apps/api && npm run build && cd ../web && npm run build && cd ../desktop && npm run dist",
+    "cursor:deploy": "node scripts/cursor-one-click-deploy.mjs",
+    "cursor:connect": "node scripts/cursor-one-click-deploy.mjs",
+    "cursor:mcp-json": "node scripts/cursor-mcp-json.mjs",
+    "cursor:mcp-json:global": "node scripts/cursor-mcp-json.mjs --global",
+    "cursor:mcp-json:workspace": "node scripts/cursor-mcp-json.mjs --workspace",
+    "cursor:mcp-server-json": "node scripts/cursor-mcp-json.mjs --server-only",
+    "cursor:mcp-copy": "node scripts/cursor-mcp-json.mjs --copy",
+    "cursor:mcp-install": "node scripts/cursor-mcp-json.mjs --open",
+    "mcp:daemon:start": "node scripts/mcp-daemon.mjs start",
+    "mcp:daemon:stop": "node scripts/mcp-daemon.mjs stop",
+    "mcp:daemon:status": "node scripts/mcp-daemon.mjs status",
+    "test:parity": "node scripts/parity-smoke.mjs",
+    "test:autoscope": "node scripts/autoscope-smoke.mjs",
+    "test:mcp": "node scripts/mcp-smoke.mjs",
+    "import:json": "node scripts/import-export-json.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
