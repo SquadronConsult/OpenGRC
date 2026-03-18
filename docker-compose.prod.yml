@@ -11,8 +11,6 @@ services:
       EVIDENCE_DIR: /app/evidence
       LOCAL_DATA_DIR: /app/local-data
       DB_SYNC: "${DB_SYNC:-true}"
-      JWT_SECRET: ${JWT_SECRET}
-      DISABLE_PUBLIC_REGISTER: "true"
       FRMR_AUTO_INGEST: "true"
       FRMR_PREFER_LOCAL: "true"
       FRMR_OFFLINE_PATH: /app/local-data/FRMR.documentation.json

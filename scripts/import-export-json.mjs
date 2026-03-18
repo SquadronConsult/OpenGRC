@@ -2,8 +2,6 @@
 import { readFile } from 'fs/promises';
 
 const API_URL = process.env.API_URL || 'http://localhost:3000';
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@localhost';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'changeme';
 const INPUT = process.argv[2];
 
 if (!INPUT) {
@@ -40,17 +38,9 @@ async function run() {
   const raw = await readFile(INPUT, 'utf-8');
   const src = JSON.parse(raw);
 
-  const login = await call('/auth/login', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
-  });
-  const token = login.access_token;
   const authJson = {
-    authorization: `Bearer ${token}`,
     'content-type': 'application/json',
   };
-  const authOnly = { authorization: `Bearer ${token}` };
 
   const project = await call('/projects', {
     method: 'POST',
@@ -70,7 +60,7 @@ async function run() {
   });
 
   const checklist = await call(`/projects/${project.id}/checklist`, {
-    headers: authOnly,
+    headers: {},
   });
 
   const byKey = new Map();

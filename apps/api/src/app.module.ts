@@ -2,8 +2,6 @@ import { Module, OnApplicationBootstrap, Logger } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { JwtModule } from '@nestjs/jwt';
-import { PassportModule } from '@nestjs/passport';
 import { join } from 'path';
 import { User } from './entities/user.entity';
 import { FrmrVersion } from './entities/frmr-version.entity';
@@ -20,9 +18,7 @@ import { WebhookSubscription } from './entities/webhook-subscription.entity';
 import { Notification } from './entities/notification.entity';
 import { Comment } from './entities/comment.entity';
 import { HealthController } from './health/health.controller';
-import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
-import { JwtStrategy } from './auth/jwt.strategy';
 import { FrmrController } from './frmr/frmr.controller';
 import { FrmrParserService } from './frmr/frmr-parser.service';
 import { FrmrIngestionService } from './frmr/frmr-ingestion.service';
@@ -84,18 +80,9 @@ function buildTypeOrmConfig() {
     ScheduleModule.forRoot(),
     TypeOrmModule.forRoot(buildTypeOrmConfig()),
     TypeOrmModule.forFeature(entities),
-    JwtModule.register({
-      global: true,
-      secret: process.env.JWT_SECRET || 'dev-secret-change-in-production',
-      signOptions: {
-        expiresIn: process.env.JWT_EXPIRES || '7d',
-      },
-    }),
-    PassportModule.register({ defaultStrategy: 'jwt' }),
   ],
   controllers: [
     HealthController,
-    AuthController,
     FrmrController,
     ProjectsController,
     ChecklistItemsController,
@@ -109,7 +96,6 @@ function buildTypeOrmConfig() {
   ],
   providers: [
     AuthService,
-    JwtStrategy,
     FrmrParserService,
     FrmrIngestionService,
     ChecklistService,

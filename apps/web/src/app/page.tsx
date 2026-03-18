@@ -39,9 +39,6 @@ export default function Home() {
         <Link href="/projects" className="btn btn-primary">
           Open Projects
         </Link>
-        <Link href="/login" className="btn btn-secondary">
-          Multi-user Login
-        </Link>
       </div>
 
       <div className="divider" />

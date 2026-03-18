@@ -1,11 +1,7 @@
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-const AUTH_MODE = process.env.NEXT_PUBLIC_AUTH_MODE || 'local';
-const IS_LOCAL_AUTH_MODE = AUTH_MODE !== 'multiuser';
 
 export function getToken(): string | null {
-  if (IS_LOCAL_AUTH_MODE) return null;
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('grc_token');
+  return null;
 }
 
 export async function api<T>(
@@ -31,4 +27,3 @@ export async function api<T>(
 }
 
 export { API };
-export { AUTH_MODE, IS_LOCAL_AUTH_MODE };

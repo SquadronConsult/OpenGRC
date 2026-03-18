@@ -64,9 +64,7 @@ Open:
 - Web UI: `http://localhost:3001`
 - API: `http://localhost:3000`
 
-Default auth mode is local (no login required):
-- `AUTH_MODE=local`
-- `NEXT_PUBLIC_AUTH_MODE=local`
+OpenGRC runs as a single-user application by default. No sign-in is required.
 
 ### Fast local development launch
 
@@ -101,7 +99,7 @@ This gives you:
 
 ## Launch Modes
 
-### 1) Docker (team/self-hosting)
+### 1) Docker (single-user on-prem / self-hosted)
 
 Dev-style stack:
 
@@ -136,9 +134,6 @@ See: `docs/DESKTOP.md`
 Primary config lives in `.env` (copy from `.env.example`).
 
 Important variables:
-- `JWT_SECRET`
-- `AUTH_MODE` (`local` or `multiuser`)
-- `NEXT_PUBLIC_AUTH_MODE`
 - `NEXT_PUBLIC_API_URL`
 - `INTEGRATION_API_KEY`
 - FRMR options (`FRMR_*`)
@@ -314,12 +309,6 @@ docker compose cp api:/app/evidence ./evidence-backup
 ### PowerShell `curl` behaves oddly
 - In PowerShell, `curl` maps to `Invoke-WebRequest`.
 - Use `Invoke-RestMethod` or a real curl binary syntax carefully.
-
-### Login page appears but local mode expected
-- Ensure:
-  - `AUTH_MODE=local`
-  - `NEXT_PUBLIC_AUTH_MODE=local`
-- Rebuild web container after env changes.
 
 ### Auto-scope live mode fails
 - Run preflight in UI first.

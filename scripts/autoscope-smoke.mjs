@@ -1,7 +1,5 @@
 /* eslint-disable no-console */
 const API_URL = process.env.API_URL || 'http://localhost:3000';
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@localhost';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'changeme';
 
 async function call(path, init = {}) {
   const res = await fetch(`${API_URL}${path}`, init);
@@ -15,16 +13,7 @@ async function call(path, init = {}) {
 }
 
 async function run() {
-  const login = await call('/auth/login', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
-  });
-  const token = login.access_token;
-  const auth = {
-    authorization: `Bearer ${token}`,
-    'content-type': 'application/json',
-  };
+  const auth = { 'content-type': 'application/json' };
 
   const project = await call('/projects', {
     method: 'POST',
@@ -57,7 +46,7 @@ async function run() {
 
   const recs = await call(
     `/projects/${project.id}/auto-scope/recommendations?status=pending_review`,
-    { headers: { authorization: `Bearer ${token}` } },
+    {},
   );
   if (!Array.isArray(recs.items) || recs.items.length === 0) {
     throw new Error('No pending recommendations returned');
@@ -74,7 +63,7 @@ async function run() {
   );
 
   const checklist = await call(`/projects/${project.id}/checklist`, {
-    headers: { authorization: `Bearer ${token}` },
+    headers: {},
   });
   if (!checklist.some((x) => x.reviewState === 'scoped_approved')) {
     throw new Error('Checklist item reviewState not updated after approval');

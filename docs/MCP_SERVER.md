@@ -187,7 +187,7 @@ These wrappers return machine-friendly accepted/rejected/error payloads and supp
 
 ## Integration-authenticated Project Creation (v1)
 
-The v1 integration API now supports project creation without JWT user login:
+The v1 integration API supports project creation through integration-key authentication:
 
 - `POST /integrations/v1/projects`
 - Auth: `Authorization: Bearer $INTEGRATION_API_KEY`
