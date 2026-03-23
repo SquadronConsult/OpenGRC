@@ -19,6 +19,7 @@ import { Notification } from './entities/notification.entity';
 import { Comment } from './entities/comment.entity';
 import { HealthController } from './health/health.controller';
 import { AuthService } from './auth/auth.service';
+import { RolesGuard } from './auth/roles.guard';
 import { FrmrController } from './frmr/frmr.controller';
 import { FrmrParserService } from './frmr/frmr-parser.service';
 import { FrmrIngestionService } from './frmr/frmr-ingestion.service';
@@ -96,6 +97,7 @@ function buildTypeOrmConfig() {
   ],
   providers: [
     AuthService,
+    RolesGuard,
     FrmrParserService,
     FrmrIngestionService,
     ChecklistService,

@@ -13,7 +13,11 @@ import { join } from 'path';
 
 const DEFAULT_URL =
   'https://raw.githubusercontent.com/FedRAMP/docs/main/FRMR.documentation.json';
-const DEFAULT_LOCAL_FRMR = join(process.cwd(), 'data', 'FRMR.documentation.json');
+
+function defaultLocalFrmrPath(): string {
+  const base = process.env.LOCAL_DATA_DIR || process.cwd();
+  return join(base, 'FRMR.documentation.json');
+}
 
 @Injectable()
 export class FrmrIngestionService {
@@ -33,7 +37,7 @@ export class FrmrIngestionService {
 
   async ingestFromUrl(url = DEFAULT_URL): Promise<FrmrVersion> {
     let raw: string;
-    const localPath = process.env.FRMR_OFFLINE_PATH || DEFAULT_LOCAL_FRMR;
+    const localPath = process.env.FRMR_OFFLINE_PATH || defaultLocalFrmrPath();
     const preferLocal = process.env.FRMR_PREFER_LOCAL !== 'false';
     if (preferLocal && (await this.exists(localPath))) {
       raw = await readFile(localPath, 'utf-8');

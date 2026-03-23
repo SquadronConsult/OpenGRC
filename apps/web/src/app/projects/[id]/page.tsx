@@ -52,6 +52,20 @@ export default function ProjectDetailPage({
     load();
   }, [id]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const w = sessionStorage.getItem('checklistInitWarning');
+      if (w) {
+        sessionStorage.removeItem('checklistInitWarning');
+        setMsg(w);
+        setMsgType('info');
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [id]);
+
   const stats = useMemo(() => {
     const total = items.length;
     const compliant = items.filter((i) => i.status === 'compliant').length;
@@ -340,7 +354,9 @@ export default function ProjectDetailPage({
             <line x1="16" y1="13" x2="8" y2="13" />
             <line x1="16" y1="17" x2="8" y2="17" />
           </svg>
-          <p>No checklist items yet. Click &quot;Generate Checklist&quot; to create them from FRMR data.</p>
+          <p>
+            No checklist items yet. Ensure FRMR data is loaded, then click &quot;Generate Checklist&quot;.
+          </p>
         </div>
       ) : (
         <div className="empty-state">

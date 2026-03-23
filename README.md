@@ -2,6 +2,8 @@
 
 OpenGRC helps you move from compliance chaos to audit-ready outputs fast.
 
+**Status:** This project is still in development. Features, APIs, and defaults may change between releases.
+
 It is a local-first, single-user FedRAMP workspace that combines:
 - machine-readable control baselines,
 - continuous evidence mapping,

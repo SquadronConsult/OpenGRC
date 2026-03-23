@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  NotFoundException,
   Param,
   Post,
   Query,
@@ -55,10 +56,7 @@ export class ProjectsController {
         b.complianceStartDate ? new Date(b.complianceStartDate) : undefined,
       );
     } catch (e) {
-      checklistInitWarning =
-        e instanceof Error
-          ? e.message
-          : 'Checklist initialization skipped';
+      checklistInitWarning = this.describeChecklistInitFailure(e);
     }
     await this.audit.log(
       req.user.userId,
@@ -185,5 +183,27 @@ export class ProjectsController {
       { deleted: result.deleted },
     );
     return result;
+  }
+
+  private describeChecklistInitFailure(e: unknown): string {
+    const noFrmrHint =
+      'No FRMR data yet. Ingest FRMR or add FRMR_OFFLINE_PATH (or place FRMR.documentation.json under LOCAL_DATA_DIR), then open the project and click Generate checklist.';
+    if (e instanceof NotFoundException) {
+      const body = e.getResponse();
+      let msg = '';
+      if (typeof body === 'string') {
+        msg = body;
+      } else if (body && typeof body === 'object' && 'message' in body) {
+        const m = (body as { message: string | string[] }).message;
+        msg = Array.isArray(m) ? m.join(' ') : typeof m === 'string' ? m : '';
+      }
+      if (msg.includes('No FRMR') || msg.includes('FRMR version')) {
+        return noFrmrHint;
+      }
+      return msg || 'Checklist initialization skipped';
+    }
+    if (e instanceof Error && e.message.includes('No FRMR')) return noFrmrHint;
+    if (e instanceof Error && e.message) return e.message;
+    return 'Checklist initialization skipped';
   }
 }

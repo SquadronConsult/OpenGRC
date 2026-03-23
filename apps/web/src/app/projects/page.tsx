@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+
+const CHECKLIST_INIT_WARNING_KEY = 'checklistInitWarning';
 
 type Project = {
   id: string;
@@ -12,6 +15,12 @@ type Project = {
   createdAt?: string;
 };
 
+type CreateProjectResponse = Project & {
+  checklistCreated?: number;
+  suggestedDueDates?: number;
+  checklistInitWarning?: string | null;
+};
+
 const impactColors: Record<string, string> = {
   low: 'badge-green',
   moderate: 'badge-yellow',
@@ -19,6 +28,7 @@ const impactColors: Record<string, string> = {
 };
 
 export default function ProjectsPage() {
+  const router = useRouter();
   const [list, setList] = useState<Project[]>([]);
   const [name, setName] = useState('My CSP');
   const [pathType, setPathType] = useState<'20x' | 'rev5'>('20x');
@@ -27,6 +37,7 @@ export default function ProjectsPage() {
   const [showForm, setShowForm] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [err, setErr] = useState('');
+  const [info, setInfo] = useState('');
   const [creating, setCreating] = useState(false);
 
   function load() {
@@ -42,9 +53,10 @@ export default function ProjectsPage() {
   async function create(e: React.FormEvent) {
     e.preventDefault();
     setErr('');
+    setInfo('');
     setCreating(true);
     try {
-      await api('/projects', {
+      const created = await api<CreateProjectResponse>('/projects', {
         method: 'POST',
         body: JSON.stringify({
           name,
@@ -56,6 +68,15 @@ export default function ProjectsPage() {
       setShowForm(false);
       setName('My CSP');
       load();
+      if (created.checklistInitWarning) {
+        try {
+          sessionStorage.setItem(CHECKLIST_INIT_WARNING_KEY, created.checklistInitWarning);
+          router.push(`/projects/${created.id}`);
+        } catch {
+          setInfo(created.checklistInitWarning);
+        }
+        return;
+      }
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : 'Failed to create project');
     } finally {
@@ -153,6 +174,7 @@ export default function ProjectsPage() {
         </div>
       )}
 
+      {info && <div className="alert alert-info">{info}</div>}
       {err && <div className="alert alert-error">{err}</div>}
 
       {list.length === 0 ? (
