@@ -4,6 +4,7 @@ import {
   Get,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -83,6 +84,7 @@ export class CommentsController {
         req.user.role,
       );
     }
+    const mentions = [...b.body.matchAll(/@([\w.-]+)/g)].map((m) => m[1]);
     return this.repo.save(
       this.repo.create({
         checklistItemId: b.checklistItemId,
@@ -90,7 +92,32 @@ export class CommentsController {
         userId: req.user.userId,
         body: b.body,
         parentId: b.parentId,
+        mentions: mentions.length ? mentions : null,
       }),
     );
+  }
+
+  @Patch(':id/resolve')
+  @ApiOperation({ summary: 'Mark comment resolved' })
+  async resolve(
+    @Param('id') id: string,
+    @Req() req: { user: { userId: string; role: string } },
+    @Body() b: { resolved?: boolean },
+  ) {
+    const c = await this.repo.findOne({ where: { id } });
+    if (!c) throw new NotFoundException();
+    if (c.checklistItemId) {
+      const item = await this.items.findOne({ where: { id: c.checklistItemId } });
+      if (item)
+        await this.projects.assertAccess(
+          item.projectId,
+          req.user.userId,
+          req.user.role,
+        );
+    }
+    const resolved = b.resolved !== false;
+    c.resolvedAt = resolved ? new Date() : null;
+    c.resolvedByUserId = resolved ? req.user.userId : null;
+    return this.repo.save(c);
   }
 }

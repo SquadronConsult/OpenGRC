@@ -37,6 +37,19 @@ export class Comment {
   @Column({ name: 'parent_id', nullable: true })
   parentId: string;
 
+  @Column({ name: 'resolved_at', type: 'datetime', nullable: true })
+  resolvedAt: Date | null;
+
+  @Column({ name: 'resolved_by_user_id', type: 'varchar', nullable: true })
+  resolvedByUserId: string | null;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'resolved_by_user_id' })
+  resolvedBy: User | null;
+
+  @Column({ type: 'simple-json', nullable: true })
+  mentions: string[] | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

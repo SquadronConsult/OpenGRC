@@ -34,6 +34,24 @@ import { RiskChecklistMitigation } from '../entities/risk-checklist-mitigation.e
 import { RiskInternalControlMitigation } from '../entities/risk-internal-control-mitigation.entity';
 import { RiskAcceptanceRequest } from '../entities/risk-acceptance-request.entity';
 import { RiskAcceptanceStep } from '../entities/risk-acceptance-step.entity';
+import { Policy } from '../entities/policy.entity';
+import { PolicyVersion } from '../entities/policy-version.entity';
+import { PolicyControlMapping } from '../entities/policy-control-mapping.entity';
+import { PolicyAttestation } from '../entities/policy-attestation.entity';
+import { ComplianceSnapshot } from '../entities/compliance-snapshot.entity';
+import { ControlTestResult } from '../entities/control-test-result.entity';
+import { GrcAudit } from '../entities/grc-audit.entity';
+import { AuditFinding } from '../entities/audit-finding.entity';
+import { AuditEvidenceRequest } from '../entities/audit-evidence-request.entity';
+import { ReportTemplate } from '../entities/report-template.entity';
+import { Vendor } from '../entities/vendor.entity';
+import { VendorAssessment } from '../entities/vendor-assessment.entity';
+import { VendorControlMapping } from '../entities/vendor-control-mapping.entity';
+import { Incident } from '../entities/incident.entity';
+import { IncidentControlImpact } from '../entities/incident-control-impact.entity';
+import { PipelineCheck } from '../entities/pipeline-check.entity';
+import { Asset } from '../entities/asset.entity';
+import { AssetControlMapping } from '../entities/asset-control-mapping.entity';
 
 export const entities = [
   User,
@@ -72,4 +90,22 @@ export const entities = [
   RiskInternalControlMitigation,
   RiskAcceptanceRequest,
   RiskAcceptanceStep,
+  Policy,
+  PolicyVersion,
+  PolicyControlMapping,
+  PolicyAttestation,
+  ComplianceSnapshot,
+  ControlTestResult,
+  GrcAudit,
+  AuditFinding,
+  AuditEvidenceRequest,
+  ReportTemplate,
+  Vendor,
+  VendorAssessment,
+  VendorControlMapping,
+  Incident,
+  IncidentControlImpact,
+  PipelineCheck,
+  Asset,
+  AssetControlMapping,
 ];

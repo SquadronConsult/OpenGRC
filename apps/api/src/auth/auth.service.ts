@@ -110,6 +110,23 @@ export class AuthService {
     return { userId: user.id, email: user.email, role: user.role };
   }
 
+  /**
+   * First active admin — used when `INTEGRATION_API_KEY` is presented as Bearer
+   * instead of a JWT (MCP / automation).
+   */
+  async getIntegrationActorUser(): Promise<{
+    userId: string;
+    email: string;
+    role: string;
+  } | null> {
+    const user = await this.users.findOne({
+      where: { isActive: true, role: 'admin' },
+      order: { createdAt: 'ASC' },
+    });
+    if (!user) return null;
+    return { userId: user.id, email: user.email, role: user.role };
+  }
+
   async login(email: string, password: string) {
     const normalized = email.trim().toLowerCase();
     const user = await this.users.findOne({ where: { email: normalized } });

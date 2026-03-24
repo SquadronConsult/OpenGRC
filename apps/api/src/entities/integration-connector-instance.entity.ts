@@ -54,6 +54,16 @@ export class IntegrationConnectorInstance {
   @Column({ name: 'last_error', type: 'text', nullable: true })
   lastError: string | null;
 
+  @Column({ name: 'recollection_enabled', type: 'boolean', default: false })
+  recollectionEnabled: boolean;
+
+  @Column({
+    name: 'recollection_interval_days',
+    type: 'int',
+    nullable: true,
+  })
+  recollectionIntervalDays: number | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

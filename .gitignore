@@ -8,6 +8,7 @@ pgdata/
 .DS_Store
 .cursor/
 local-data/
-evidence/
+# Runtime evidence exports only (do not ignore apps/api/src/evidence/ API module)
+/evidence/
 *.sqlite
 tsconfig.tsbuildinfo

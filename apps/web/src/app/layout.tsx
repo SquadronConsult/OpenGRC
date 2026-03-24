@@ -12,6 +12,8 @@ import {
   ClipboardCheck,
   Zap,
   Menu,
+  FileText,
+  Layers,
 } from 'lucide-react';
 import { AuthProvider } from '@/components/AuthProvider';
 import { AuthShell } from '@/components/AuthShell';
@@ -23,6 +25,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { LucideIcon } from 'lucide-react';
+import { GlobalSearchCommand } from '@/components/GlobalSearchCommand';
 
 interface NavItem {
   href: string;
@@ -44,6 +47,13 @@ const navSections: { section: string; links: NavItem[] }[] = [
       { href: '/glossary', label: 'Glossary', icon: BookOpen },
       { href: '/requirements', label: 'Requirements', icon: ClipboardCheck },
       { href: '/ksi', label: 'KSIs', icon: Zap },
+    ],
+  },
+  {
+    section: 'GRC',
+    links: [
+      { href: '/policies', label: 'Policies', icon: FileText },
+      { href: '/frameworks/builder', label: 'Framework builder', icon: Layers },
     ],
   },
 ];
@@ -159,6 +169,7 @@ export default function RootLayout({
                 </AuthShell>
               </div>
             </div>
+            <GlobalSearchCommand />
             <Toaster position="bottom-right" richColors />
           </TooltipProvider>
         </AuthProvider>

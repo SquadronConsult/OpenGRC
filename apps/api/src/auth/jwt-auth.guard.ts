@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
+import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AUTH_COOKIE_NAME, IS_PUBLIC_KEY } from './auth.constants';
 
@@ -33,6 +34,7 @@ export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly auth: AuthService,
     private readonly reflector: Reflector,
+    private readonly config: ConfigService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -48,6 +50,17 @@ export class JwtAuthGuard implements CanActivate {
     const token = extractBearer(req) || extractCookie(req);
     if (!token) {
       throw new UnauthorizedException('Missing authentication');
+    }
+    const integrationKey = this.config.get<string>('INTEGRATION_API_KEY');
+    if (integrationKey?.length && token === integrationKey) {
+      const actor = await this.auth.getIntegrationActorUser();
+      if (!actor) {
+        throw new UnauthorizedException(
+          'Integration key configured but no admin user exists',
+        );
+      }
+      req.user = actor;
+      return true;
     }
     let payload: { sub: string };
     try {

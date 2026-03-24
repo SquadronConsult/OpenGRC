@@ -1,7 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class RiskRegister1700000004000 implements MigrationInterface {
-  name = 'RiskRegister1700000004000';
+/** Renamed from 1700000004000 to avoid duplicate migration timestamp with ConnectorAutomation. */
+export class RiskRegister1700000004010 implements MigrationInterface {
+  name = 'RiskRegister1700000004010';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     const driver = queryRunner.connection.options.type;

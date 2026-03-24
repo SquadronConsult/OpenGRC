@@ -107,8 +107,35 @@ async function run() {
     body: JSON.stringify({ checklistItemId: firstItemId }),
   });
 
+  const search = await call(
+    `/search?q=${encodeURIComponent('Parity')}&projectId=${encodeURIComponent(project.id)}`,
+    { headers: bearer },
+  );
+  if (!Array.isArray(search.items)) {
+    throw new Error('Unified search failed');
+  }
+
+  const policies = await call('/policies', { headers: bearer });
+  if (!Array.isArray(policies)) {
+    throw new Error('Policies list failed');
+  }
+
+  await call(`/projects/${project.id}/risks/bulk`, {
+    method: 'PATCH',
+    headers: auth,
+    body: JSON.stringify({
+      ids: [risk.id],
+      patch: { status: 'open' },
+    }),
+  });
+
+  const health = await call('/health', { headers: bearer });
+  if (!health.schemaVersion) {
+    throw new Error('Health missing schemaVersion');
+  }
+
   console.log(
-    `OK project=${project.id} generated=${generated.created} checklist=${checklist.length} finding=${findings.id} risk=${risk.id}`,
+    `OK project=${project.id} generated=${generated.created} checklist=${checklist.length} finding=${findings.id} risk=${risk.id} schema=${health.schemaVersion}`,
   );
 }
 

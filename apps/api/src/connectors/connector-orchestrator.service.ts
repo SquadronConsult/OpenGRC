@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto';
 import { IntegrationConnectorInstance } from '../entities/integration-connector-instance.entity';
 import { IntegrationConnectorRun } from '../entities/integration-connector-run.entity';
 import { IntegrationEvidenceService } from '../integrations/integration-evidence.service';
+import { ControlTestResult } from '../entities/control-test-result.entity';
 import type { EvidenceUpsertItemDto } from '../integrations/dto/integration-v1.dto';
 import { ConnectorRegistry } from './connector-registry';
 import type { ConnectorEvidenceRecord } from './connector.types';
@@ -19,6 +20,8 @@ export class ConnectorOrchestratorService {
     private readonly instances: Repository<IntegrationConnectorInstance>,
     @InjectRepository(IntegrationConnectorRun)
     private readonly runs: Repository<IntegrationConnectorRun>,
+    @InjectRepository(ControlTestResult)
+    private readonly testResults: Repository<ControlTestResult>,
     private readonly registry: ConnectorRegistry,
     private readonly evidence: IntegrationEvidenceService,
   ) {}
@@ -122,6 +125,23 @@ export class ConnectorOrchestratorService {
         run.errorMessage = `${ingest.rejected.length} item(s) failed ingestion`;
       }
       await this.runs.save(run);
+
+      const seen = new Set<string>();
+      for (const dto of dtos) {
+        if (!dto.checklistItemId || seen.has(dto.checklistItemId)) continue;
+        seen.add(dto.checklistItemId);
+        await this.testResults.save(
+          this.testResults.create({
+            projectId: inst.projectId,
+            checklistItemId: dto.checklistItemId,
+            testType: 'automated',
+            result: 'pass',
+            testedAt: new Date(),
+            nextTestDate: null,
+            connectorRunId: run.id,
+          }),
+        );
+      }
 
       return run;
     } catch (e) {

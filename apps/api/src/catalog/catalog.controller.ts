@@ -171,4 +171,61 @@ export class CatalogController {
     );
     return { ok: true, mappingId: row.id };
   }
+
+  @Get('cross-map')
+  @ApiOperation({ summary: 'Cross-framework control mappings (read-only)' })
+  async crossMap(
+    @Query('sourceFramework') sourceFramework?: string,
+    @Query('targetFramework') targetFramework?: string,
+  ) {
+    const qb = this.icm
+      .createQueryBuilder('m')
+      .leftJoinAndSelect('m.catalogRequirement', 'cr')
+      .leftJoinAndSelect('cr.frameworkRelease', 'fr')
+      .leftJoinAndSelect('fr.framework', 'fw')
+      .leftJoinAndSelect('m.internalControl', 'ic');
+    if (sourceFramework) {
+      qb.andWhere('fw.code = :sourceFramework', { sourceFramework });
+    }
+    if (targetFramework) {
+      qb.andWhere('m.frameworkCode = :targetFramework OR m.frameworkCode IS NULL', {
+        targetFramework,
+      });
+    }
+    const items = await qb.orderBy('m.priorityRank', 'ASC').take(2000).getMany();
+    return {
+      sourceFramework: sourceFramework ?? null,
+      targetFramework: targetFramework ?? null,
+      mappings: items.map((m) => ({
+        id: m.id,
+        internalControlId: m.internalControlId,
+        internalControlCode: m.internalControl?.code ?? null,
+        catalogRequirementId: m.catalogRequirementId,
+        requirementCode: m.catalogRequirement?.requirementCode ?? null,
+        frameworkCode: m.frameworkCode,
+        mappingType: m.mappingType,
+        coverage: m.coverage,
+      })),
+      total: items.length,
+    };
+  }
+
+  @Get('internal-controls/:controlId/coverage')
+  @ApiOperation({ summary: 'Coverage for one internal control' })
+  async internalControlCoverage(@Param('controlId') controlId: string) {
+    const ic = await this.ic.findOne({
+      where: { id: controlId },
+      relations: ['mappings', 'mappings.catalogRequirement'],
+    });
+    if (!ic) return { control: null, mappings: [] };
+    return {
+      control: { id: ic.id, code: ic.code, title: ic.title },
+      mappings: (ic.mappings || []).map((m) => ({
+        catalogRequirementId: m.catalogRequirementId,
+        requirementCode: m.catalogRequirement?.requirementCode ?? null,
+        coverage: m.coverage,
+        mappingType: m.mappingType,
+      })),
+    };
+  }
 }

@@ -349,6 +349,44 @@ export async function connectorsCreateV1(payload) {
   });
 }
 
+export async function opengrcSearchV1(payload = {}) {
+  if (!config.integrationApiKey) {
+    return {
+      ok: false,
+      skipped: true,
+      reason: 'INTEGRATION_API_KEY not configured',
+    };
+  }
+  const q = String(payload.q ?? payload.query ?? '').trim();
+  if (q.length < 2) {
+    throw new Error('q must be at least 2 characters');
+  }
+  return getJson(
+    `/search${buildQuery({
+      q,
+      types: payload.types,
+      projectId: payload.projectId,
+      limit: payload.limit,
+    })}`,
+  );
+}
+
+export async function opengrcPoliciesListV1(payload = {}) {
+  if (!config.integrationApiKey) {
+    return {
+      ok: false,
+      skipped: true,
+      reason: 'INTEGRATION_API_KEY not configured',
+    };
+  }
+  return getJson(
+    `/policies${buildQuery({
+      projectId: payload.projectId,
+      status: payload.status,
+    })}`,
+  );
+}
+
 export async function fedrampOscalReportV1(payload) {
   if (!payload?.projectId) throw new Error('projectId is required');
   const [ssp, poam, taxonomy] = await Promise.all([

@@ -306,6 +306,15 @@ Use `frmr_taxonomy_v1` to get machine-readable FRMR process, requirement, actor,
 }
 ```
 
+### Unified search and policies (GRC)
+
+- **`opengrc_search_v1`**: `{ "q": "access", "projectId": "optional-uuid", "types": "checklist,evidence,risk,policy", "limit": 20 }`  
+  Calls `GET /search`. `q` must be at least 2 characters.
+- **`opengrc_policies_list_v1`**: `{ "projectId": "optional", "status": "optional" }`  
+  Calls `GET /policies`.
+
+Both use `INTEGRATION_API_KEY` as `Authorization: Bearer …` (same as other OpenGRC integration tools). The API accepts this key on JWT-protected routes and maps it to the first active **admin** user for authorization.
+
 ### FedRAMP OSCAL handoff
 
 Use `fedramp_oscal_report_v1` after a closure/autopilot run to package:

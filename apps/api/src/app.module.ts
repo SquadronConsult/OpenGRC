@@ -69,6 +69,20 @@ import { TeamsConnector } from './connectors/impl/teams.connector';
 import { RisksController } from './risks/risks.controller';
 import { RiskService } from './risks/risk.service';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { PoliciesController } from './policies/policies.controller';
+import { PolicyService } from './policies/policy.service';
+import { PolicyCronService } from './policies/policy-cron.service';
+import { SearchController } from './search/search.controller';
+import { SearchService } from './search/search.service';
+import { EvidenceRoutesController } from './evidence/evidence-routes.controller';
+import {
+  ProjectAuditsController,
+  ReportsController,
+  VendorsController,
+  IncidentsController,
+  AssetsController,
+  PipelineController,
+} from './grc/grc-bundled.controller';
 
 function resolveSqlitePath(): string {
   const explicit = process.env.SQLITE_PATH;
@@ -155,6 +169,15 @@ function buildTypeOrmConfig() {
     CatalogController,
     ConnectorsController,
     RisksController,
+    PoliciesController,
+    SearchController,
+    EvidenceRoutesController,
+    ProjectAuditsController,
+    ReportsController,
+    VendorsController,
+    IncidentsController,
+    AssetsController,
+    PipelineController,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
@@ -190,6 +213,9 @@ function buildTypeOrmConfig() {
     ConnectorInstanceService,
     ConnectorSchedulerService,
     RiskService,
+    PolicyService,
+    PolicyCronService,
+    SearchService,
   ],
 })
 export class AppModule implements OnApplicationBootstrap {

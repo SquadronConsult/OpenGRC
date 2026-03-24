@@ -31,4 +31,8 @@ export class ProjectMember {
 
   @Column({ type: 'varchar' })
   role: string;
+
+  /** Optional granular permissions (ProjectPermissionKey[]). */
+  @Column({ type: 'simple-json', nullable: true })
+  permissions: string[] | null;
 }

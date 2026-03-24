@@ -62,6 +62,16 @@ export class EvidenceItem {
   @JoinColumn({ name: 'uploaded_by_id' })
   uploadedBy: User;
 
+  @Column({ name: 'expires_at', type: 'datetime', nullable: true })
+  expiresAt: Date | null;
+
+  @Column({ name: 'superseded_by_id', type: 'varchar', nullable: true })
+  supersededById: string | null;
+
+  @ManyToOne(() => EvidenceItem, { nullable: true })
+  @JoinColumn({ name: 'superseded_by_id' })
+  supersededBy: EvidenceItem | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

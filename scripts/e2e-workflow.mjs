@@ -74,6 +74,14 @@ async function run() {
     throw new Error('GET /projects expected paginated envelope');
   }
 
+  const search = await call(
+    `/search?q=${encodeURIComponent('E2E')}&projectId=${encodeURIComponent(project.id)}`,
+    { headers: authHeader },
+  );
+  if (!Array.isArray(search.items)) {
+    throw new Error('GET /search expected items array');
+  }
+
   const sync = await call(`/projects/${project.id}/poam/sync-from-checklist`, {
     method: 'POST',
     headers: authHeader,

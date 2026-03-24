@@ -16,7 +16,9 @@ import { ProjectsService } from '../projects/projects.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditService } from '../audit/audit.service';
+import { DataSource } from 'typeorm';
 import { PatchChecklistItemDto } from './dto/patch-checklist-item.dto';
+import { BulkChecklistPatchDto } from './dto/bulk-checklist.dto';
 
 @ApiTags('checklist-items')
 @Controller('checklist-items')
@@ -25,11 +27,50 @@ import { PatchChecklistItemDto } from './dto/patch-checklist-item.dto';
 export class ChecklistItemsController {
   constructor(
     @InjectRepository(ChecklistItem) private readonly repo: Repository<ChecklistItem>,
+    private readonly ds: DataSource,
     private readonly projects: ProjectsService,
     private readonly webhooks: WebhooksService,
     private readonly notifications: NotificationsService,
     private readonly audit: AuditService,
   ) {}
+
+  @Patch('bulk')
+  @ApiOperation({ summary: 'Bulk update checklist items' })
+  async bulkPatch(
+    @Req() req: { user: { userId: string; role: string } },
+    @Body() b: BulkChecklistPatchDto,
+  ) {
+    const updated: ChecklistItem[] = [];
+    await this.ds.transaction(async (em) => {
+      for (const id of b.ids) {
+        const item = await em.findOne(ChecklistItem, {
+          where: { id },
+          relations: ['project'],
+        });
+        if (!item) continue;
+        await this.projects.assertAccess(
+          item.projectId,
+          req.user.userId,
+          req.user.role,
+        );
+        if (b.status != null) item.status = b.status;
+        if (b.ownerUserId !== undefined)
+          item.ownerUserId = b.ownerUserId || null;
+        if (b.dueDate !== undefined)
+          item.dueDate = b.dueDate ? new Date(b.dueDate) : null;
+        await em.save(item);
+        updated.push(item);
+        await this.audit.log(
+          req.user.userId,
+          'checklist.bulk_update',
+          'checklist_item',
+          id,
+          { patch: { status: b.status, ownerUserId: b.ownerUserId, dueDate: b.dueDate } },
+        );
+      }
+    });
+    return { updated: updated.length, items: updated };
+  }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update checklist item' })

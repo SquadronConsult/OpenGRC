@@ -13,6 +13,7 @@ import { User } from '../entities/user.entity';
 import { SourceSnapshot } from '../entities/source-snapshot.entity';
 import { DetectorFinding } from '../entities/detector-finding.entity';
 import { WebhookSubscription } from '../entities/webhook-subscription.entity';
+import { DEFAULT_PERMISSIONS_BY_ROLE } from '../auth/permissions.constants';
 
 @Injectable()
 export class ProjectsService {
@@ -131,11 +132,13 @@ export class ProjectsService {
       where: { projectId, userId: user.id },
     });
     if (exists) return exists;
+    const perms = DEFAULT_PERMISSIONS_BY_ROLE[memberRole] ?? null;
     return this.mem.save(
       this.mem.create({
         projectId,
         userId: user.id,
         role: memberRole,
+        permissions: perms,
       }),
     );
   }

@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { Project } from '../entities/project.entity';
 import { ChecklistItem } from '../entities/checklist-item.entity';
 import { PoamEntry } from '../entities/poam-entry.entity';
+import { ControlTestResult } from '../entities/control-test-result.entity';
+import { Finding } from '../entities/finding.entity';
 
 type PoamRisk = 'Low' | 'Moderate' | 'High';
 
@@ -39,6 +41,9 @@ export class ExportService {
     @InjectRepository(Project) private readonly proj: Repository<Project>,
     @InjectRepository(ChecklistItem) private readonly items: Repository<ChecklistItem>,
     @InjectRepository(PoamEntry) private readonly poamRepo: Repository<PoamEntry>,
+    @InjectRepository(ControlTestResult)
+    private readonly ctr: Repository<ControlTestResult>,
+    @InjectRepository(Finding) private readonly findings: Repository<Finding>,
   ) {}
 
   async exportJson(projectId: string) {
@@ -299,6 +304,83 @@ export class ExportService {
         'back-matter': {
           resources,
         },
+      },
+    };
+  }
+
+  async exportOscalAssessmentPlanJson(projectId: string) {
+    const project = await this.proj.findOne({ where: { id: projectId } });
+    if (!project) throw new NotFoundException();
+    const tests = await this.ctr.find({
+      where: { projectId },
+      relations: ['checklistItem'],
+      order: { createdAt: 'DESC' },
+      take: 2000,
+    });
+    return {
+      'assessment-plan': {
+        uuid: `ap-${project.id}`,
+        metadata: this.buildOscalMetadata(
+          `${project.name} Assessment Plan`,
+          'OpenGRC OSCAL Assessment Plan export (control test schedule)',
+        ),
+        'reviewed-controls': tests.map((t) => ({
+          'control-id': t.checklistItemId,
+          uuid: t.id,
+          description: `Automated/manual test (${t.testType})`,
+          props: [
+            { name: 'test-type', value: t.testType },
+            { name: 'result', value: t.result },
+            ...(t.nextTestDate
+              ? [{ name: 'next-test-date', value: t.nextTestDate }]
+              : []),
+          ],
+        })),
+      },
+    };
+  }
+
+  async exportOscalAssessmentResultsJson(projectId: string) {
+    const project = await this.proj.findOne({ where: { id: projectId } });
+    if (!project) throw new NotFoundException();
+    const list = await this.findings
+      .createQueryBuilder('f')
+      .innerJoinAndSelect('f.checklistItem', 'ci')
+      .where('ci.projectId = :projectId', { projectId })
+      .orderBy('f.createdAt', 'DESC')
+      .take(2000)
+      .getMany();
+    const tests = await this.ctr.find({
+      where: { projectId },
+      relations: ['checklistItem'],
+      take: 2000,
+    });
+    return {
+      'assessment-results': {
+        uuid: `ar-${project.id}`,
+        metadata: this.buildOscalMetadata(
+          `${project.name} Assessment Results`,
+          'OpenGRC OSCAL Assessment Results (observations from findings and tests)',
+        ),
+        results: [
+          ...list.map((f) => ({
+            uuid: f.id,
+            title: f.title,
+            description: f.description,
+            'control-id': f.checklistItemId,
+            props: [{ name: 'severity', value: f.severity }],
+          })),
+          ...tests.map((t) => ({
+            uuid: `obs-${t.id}`,
+            title: `Test result`,
+            description: `Result: ${t.result}`,
+            'control-id': t.checklistItemId,
+            props: [
+              { name: 'test-type', value: t.testType },
+              { name: 'result', value: t.result },
+            ],
+          })),
+        ],
       },
     };
   }

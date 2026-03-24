@@ -29,6 +29,7 @@ import { AuditService } from '../audit/audit.service';
 import { PoamService } from '../poam/poam.service';
 import { ProjectSnapshotService } from '../project-snapshots/project-snapshot.service';
 import { ConnectorInstanceService } from '../connectors/connector-instance.service';
+import { DashboardService } from '../dashboard/dashboard.service';
 import {
   AddProjectMemberRequestDto,
   CreateProjectRequestDto,
@@ -56,6 +57,7 @@ export class ProjectsController {
     private readonly poamSvc: PoamService,
     private readonly snapshots: ProjectSnapshotService,
     private readonly connectors: ConnectorInstanceService,
+    private readonly dashboard: DashboardService,
   ) {}
 
   @Get()
@@ -112,6 +114,41 @@ export class ProjectsController {
     };
   }
 
+  @Get(':id/dashboard/trends')
+  @ApiOperation({ summary: 'Compliance trends (snapshots)' })
+  async dashboardTrends(
+    @Param('id') id: string,
+    @Req() req: { user: { userId: string; role: string } },
+    @Query('from') from: string,
+    @Query('to') to: string,
+    @Query('interval') interval?: 'daily' | 'weekly',
+  ) {
+    await this.projects.assertAccess(id, req.user.userId, req.user.role);
+    const f = from || new Date(Date.now() - 90 * 86400000).toISOString();
+    const t = to || new Date().toISOString();
+    return this.dashboard.getTrends(id, f, t, interval || 'daily');
+  }
+
+  @Get(':id/dashboard/conmon')
+  @ApiOperation({ summary: 'Continuous monitoring summary' })
+  async dashboardConmon(
+    @Param('id') id: string,
+    @Req() req: { user: { userId: string; role: string } },
+  ) {
+    await this.projects.assertAccess(id, req.user.userId, req.user.role);
+    return this.dashboard.getConMonSummary(id);
+  }
+
+  @Get(':id/evidence-freshness')
+  @ApiOperation({ summary: 'Evidence freshness heatmap' })
+  async evidenceFreshness(
+    @Param('id') id: string,
+    @Req() req: { user: { userId: string; role: string } },
+  ) {
+    await this.projects.assertAccess(id, req.user.userId, req.user.role);
+    return this.dashboard.getEvidenceFreshness(id);
+  }
+
   @Get(':id/export')
   @ApiOperation({
     summary: 'Export project',
@@ -137,6 +174,14 @@ export class ProjectsController {
     const q = format || 'json';
     if (q === 'oscal-ssp') {
       const json = await this.exportSvc.exportOscalSspJson(id);
+      return res.json(json);
+    }
+    if (q === 'oscal-assessment-plan') {
+      const json = await this.exportSvc.exportOscalAssessmentPlanJson(id);
+      return res.json(json);
+    }
+    if (q === 'oscal-assessment-results') {
+      const json = await this.exportSvc.exportOscalAssessmentResultsJson(id);
       return res.json(json);
     }
     if (q === 'md' || q === 'markdown') {

@@ -10,10 +10,13 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuditService } from '../audit/audit.service';
 import { RiskService } from './risk.service';
+import { ProjectsService } from '../projects/projects.service';
+import { Risk } from '../entities/risk.entity';
 import { RiskListQueryDto } from './dto/risk-list-query.dto';
 import { skipTakeFromPageLimit } from '../common/dto/page-limit-query.dto';
 import { parseSortParam } from '../common/sort/parse-sort';
@@ -24,6 +27,8 @@ export class RisksController {
   constructor(
     private readonly risks: RiskService,
     private readonly audit: AuditService,
+    private readonly ds: DataSource,
+    private readonly projects: ProjectsService,
   ) {}
 
   @Get('heatmap')
@@ -62,6 +67,46 @@ export class RisksController {
       paging,
       sort,
     );
+  }
+
+  @Patch('bulk')
+  @ApiOperation({ summary: 'Bulk update risks' })
+  async bulk(
+    @Param('id') projectId: string,
+    @Req() req: { user: { userId: string; role: string } },
+    @Body()
+    b: {
+      ids: string[];
+      patch: Partial<{
+        status: string;
+        ownerUserId: string | null;
+      }>;
+    },
+  ) {
+    const updated: Risk[] = [];
+    await this.projects.assertAccess(
+      projectId,
+      req.user.userId,
+      req.user.role,
+    );
+    await this.ds.transaction(async (em) => {
+      for (const id of b.ids || []) {
+        const row = await em.findOne(Risk, {
+          where: { id, projectId },
+        });
+        if (!row) continue;
+        if (b.patch.status != null) row.status = b.patch.status;
+        if (b.patch.ownerUserId !== undefined)
+          row.ownerUserId = b.patch.ownerUserId;
+        await em.save(row);
+        updated.push(row);
+        await this.audit.log(req.user.userId, 'risk.bulk_update', 'risk', id, {
+          projectId,
+          patch: b.patch,
+        });
+      }
+    });
+    return { updated: updated.length, items: updated };
   }
 
   @Post()
