@@ -7,6 +7,7 @@ import { Project } from '../entities/project.entity';
 import { ComplianceSnapshot } from '../entities/compliance-snapshot.entity';
 import { EvidenceItem } from '../entities/evidence-item.entity';
 import { Risk } from '../entities/risk.entity';
+import { RiskStatus } from '../entities/enums/grc-enums';
 
 @Injectable()
 export class DashboardService {
@@ -218,7 +219,7 @@ export class DashboardService {
       .andWhere('e.expiresAt < :now', { now: new Date() })
       .getCount();
     const openRisks = await this.riskRepo.count({
-      where: { projectId, status: 'open' },
+      where: { projectId, status: RiskStatus.Open },
     });
     const row = this.snapshots.create({
       projectId,

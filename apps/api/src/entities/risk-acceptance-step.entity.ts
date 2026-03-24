@@ -7,6 +7,7 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
+import { datetimeColumnType } from '../db/column-types';
 import { RiskAcceptanceRequest } from './risk-acceptance-request.entity';
 import { User } from './user.entity';
 
@@ -41,7 +42,7 @@ export class RiskAcceptanceStep {
   @Column({ type: 'text', nullable: true })
   notes: string | null;
 
-  @Column({ name: 'acted_at', type: 'datetime', nullable: true })
+  @Column({ name: 'acted_at', type: datetimeColumnType, nullable: true })
   actedAt: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })

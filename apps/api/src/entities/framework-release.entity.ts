@@ -16,7 +16,7 @@ export class FrameworkRelease {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'framework_id' })
+  @Column({ name: 'framework_id', type: 'uuid' })
   frameworkId: string;
 
   @ManyToOne(() => Framework, (f) => f.releases, { onDelete: 'CASCADE' })
@@ -27,14 +27,14 @@ export class FrameworkRelease {
   @Column({ name: 'release_code' })
   releaseCode: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   label: string | null;
 
   @Column({ type: 'simple-json', nullable: true })
   metadata: Record<string, unknown> | null;
 
   /** When this release is produced from a FRMR ingest, links the legacy version row. */
-  @Column({ name: 'frmr_version_id', type: 'varchar', nullable: true })
+  @Column({ name: 'frmr_version_id', type: 'uuid', nullable: true })
   frmrVersionId: string | null;
 
   @ManyToOne(() => FrmrVersion, { nullable: true, onDelete: 'SET NULL' })

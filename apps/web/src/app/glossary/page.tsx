@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Search, BookOpen } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Input } from '@/components/ui/input';
@@ -29,8 +30,15 @@ export default function GlossaryPage() {
       api<{ items: Term[]; total: number }>(
         `/frmr/terms?limit=50&q=${encodeURIComponent(q)}`,
       )
-        .then((d) => { setItems(d.items); setTotal(d.total); })
-        .catch(() => { setItems([]); setTotal(0); })
+        .then((d) => {
+          setItems(d.items);
+          setTotal(d.total);
+        })
+        .catch((e: unknown) => {
+          toast.error(e instanceof Error ? e.message : 'Failed to load glossary');
+          setItems([]);
+          setTotal(0);
+        })
         .finally(() => setLoading(false));
     }, 300);
     return () => clearTimeout(t);

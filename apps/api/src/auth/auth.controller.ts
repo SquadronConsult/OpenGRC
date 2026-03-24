@@ -11,8 +11,9 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
-import { BootstrapDto, LoginDto } from './auth.dto';
+import { ChangePasswordDto, LoginDto } from './auth.dto';
 import { AUTH_COOKIE_NAME } from './auth.constants';
+import type { AuthenticatedRequest } from './auth.types';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -44,27 +45,21 @@ export class AuthController {
     return { ok: true };
   }
 
-  @Get('me')
+  @Post('change-password')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('bearer')
-  @ApiOperation({ summary: 'Current user' })
-  async me(@Req() req: { user: { userId: string } }) {
-    return this.auth.me(req.user.userId);
-  }
-
-  @Post('bootstrap')
   @ApiOperation({
-    summary: 'One-time first admin bootstrap (requires BOOTSTRAP_TOKEN env; only when no users exist)',
+    summary: 'Change password (required when mustChangePassword is true after initial admin login)',
   })
-  async bootstrap(
-    @Body() dto: BootstrapDto,
+  async changePassword(
+    @Body() dto: ChangePasswordDto,
+    @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { token, user } = await this.auth.bootstrapFirstAdmin(
-      dto.email,
-      dto.password,
-      dto.name,
-      dto.bootstrapToken,
+    const { token, user } = await this.auth.changePassword(
+      req.user.userId,
+      dto.currentPassword,
+      dto.newPassword,
     );
     const maxAgeSec = parseInt(process.env.AUTH_COOKIE_MAX_AGE_SEC || '604800', 10);
     res.cookie(AUTH_COOKIE_NAME, token, {
@@ -75,5 +70,13 @@ export class AuthController {
       path: '/',
     });
     return { token, user };
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('bearer')
+  @ApiOperation({ summary: 'Current user' })
+  async me(@Req() req: AuthenticatedRequest) {
+    return this.auth.me(req.user.userId);
   }
 }

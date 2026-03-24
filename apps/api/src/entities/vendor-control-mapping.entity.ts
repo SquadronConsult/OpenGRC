@@ -4,11 +4,14 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Vendor } from './vendor.entity';
 import { InternalControl } from './internal-control.entity';
 
 @Entity('vendor_control_mappings')
+@Index(['vendorId'])
+@Index(['internalControlId'])
 export class VendorControlMapping {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -20,7 +23,7 @@ export class VendorControlMapping {
   @JoinColumn({ name: 'vendor_id' })
   vendor: Vendor;
 
-  @Column({ name: 'internal_control_id' })
+  @Column({ name: 'internal_control_id', type: 'uuid' })
   internalControlId: string;
 
   @ManyToOne(() => InternalControl, { onDelete: 'CASCADE' })

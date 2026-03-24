@@ -25,7 +25,7 @@ export class RiskInternalControlMitigation {
   @JoinColumn({ name: 'risk_id' })
   risk: Risk;
 
-  @Column({ name: 'internal_control_id' })
+  @Column({ name: 'internal_control_id', type: 'uuid' })
   internalControlId: string;
 
   @ManyToOne(() => InternalControl, { onDelete: 'CASCADE' })

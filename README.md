@@ -4,64 +4,60 @@ OpenGRC helps you move from compliance chaos to audit-ready outputs fast.
 
 **Status:** This project is still in development. Features, APIs, and defaults may change between releases.
 
-It is a local-first FedRAMP workspace that combines:
-- machine-readable control baselines,
-- continuous evidence mapping,
-- guided gap closure,
-- and AI-agent automation through MCP.
+It is a **local-first GRC workspace** built around a **generic control catalog** (frameworks, releases, controls, and requirements). The deepest packaged program today is **FedRAMP** via **FRMR** (Requirements Management Repository): machine-readable baselines, evidence mapping, gap closure, POA&M, OSCAL exports, and **AI-agent automation through MCP**.
 
-If you need to stand up a practical FedRAMP program without buying a heavyweight platform, this is built for you.
+If you need a practical FedRAMP-oriented program without a heavyweight platform—and room to grow into other frameworks—this is built for you.
 
 ## Why OpenGRC
 
-- **Start fast:** run locally with Docker in minutes.
+- **Start fast:** one Docker image with Postgres, API, and web UI.
 - **Stay in control:** your data stays on your machine or self-hosted environment.
 - **Work like auditors think:** checklist, evidence, POA&M, and SSP flow in one place.
 - **Automate smartly:** MCP tools let AI agents discover gaps, recommend fixes, and produce machine-readable outputs.
 
 ## What You Can Do
 
-- Ingest FRMR data (local file or remote source)
+- Ingest FRMR data (local file or remote source) and drive **FedRAMP 20x / Rev 5**-style projects
+- Register additional framework packages over time via the **generic catalog** (`GET /catalog/frameworks` in the API)
 - Generate project baselines by path type and impact
 - Track checklist status and due dates
-- Attach evidence directly to controls
-- Run recommendation-first auto-scoping
+- Attach evidence directly to controls; run **connector** automation where configured
+- Run recommendation-first **auto-scoping**
+- Manage **risks**, **policies**, and related GRC entities in-app
 - Generate POA&M with timeline view
-- Export OSCAL SSP + OSCAL POA&M JSON
-- Use MCP autopilot to drive end-to-end compliance workflows
+- Export OSCAL SSP + OSCAL POA&M JSON (FedRAMP-oriented tooling)
+- Use MCP (**capabilities_v1**, autopilot, taxonomy, etc.) for end-to-end agent workflows
 
-## Get Started (5 Minutes)
+## Get Started
 
-### 1) Prerequisites
+### Prerequisites
 
-- Node.js 20+
-- Docker Desktop (or compatible Docker Engine + Compose)
+- **Docker Desktop** (or Docker Engine + Compose v2) for the recommended install
+- **Node.js 20+** if you run the API and web locally without Docker (see [CONTRIBUTING.md](CONTRIBUTING.md))
 
-### 2) Launch (split dev: API + Web)
+### Run with Docker (recommended)
 
-From repo root:
+Single container: **PostgreSQL + Nest API + Next.js** on one port.
+
+From the repo root:
 
 ```bash
-copy .env.example .env
-# Set SEED_ADMIN_PASSWORD (8+ chars) and AUTH_JWT_SECRET in .env
 docker compose up --build
 ```
 
-Open:
-- Web UI: `http://localhost:3001` — sign in with the seeded admin (`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`)
-- API: `http://localhost:3000`
+- **Web UI:** [http://localhost:8080](http://localhost:8080) — the UI talks to the API via same-origin `/api/*` rewrites.
+- **API (via browser / same origin):** `http://localhost:8080/api/...`
+- **Direct API inside the container** is not exposed on the host; use the UI or call through `/api` as above.
 
-### 2b) Single-container (Postgres + API + Web)
+Set `AUTH_JWT_SECRET` (required for production) and `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` (≥8 chars) so the first admin is created when the database is empty; that account must set a new password on first login. The all-in-one image uses embedded Postgres with a migration-driven bootstrap for fresh installs and upgrades. See [docs/PRODUCTION.md](docs/PRODUCTION.md) for TLS and hardening.
 
-```bash
-docker compose -f docker-compose.all-in-one.yml up --build
-```
+Persistence: Postgres data lives in the `pgdata` Docker volume.
 
-- Web UI: `http://localhost:8080` (Next proxies API traffic via `/api/*`)
+### Run without Docker (developers)
 
-Set `BOOTSTRAP_TOKEN` (and `AUTH_JWT_SECRET`) in the environment for first-admin bootstrap, or rely on optional `SEED_ADMIN_PASSWORD` for an auto-seeded admin when the database is empty.
+From the repo root, use two terminals: `npm run dev:api` and `npm run dev:web` (see [CONTRIBUTING.md](CONTRIBUTING.md)). Default URLs are API `http://localhost:3000` and web `http://localhost:3001`.
 
-### 3) First Success Path
+## First Success Path
 
 1. Create a new project in **Projects**
 2. Let OpenGRC generate the checklist baseline
@@ -72,12 +68,9 @@ Set `BOOTSTRAP_TOKEN` (and `AUTH_JWT_SECRET`) in the environment for first-admin
 
 ## AI Agent Mode (MCP)
 
-OpenGRC includes a localhost MCP endpoint so Cursor/Claude-style agents can:
-- inventory repo and environment context,
-- map gaps to FRMR/20x targets,
-- propose or apply remediation steps,
-- sync evidence,
-- and produce OSCAL deliverables.
+OpenGRC ships an MCP HTTP server and a **MCP Connect** page in the web UI (**sidebar → MCP Connect**, or `/mcp`) with copy/paste install steps for Cursor. The host daemon listens on:
+
+- `http://127.0.0.1:3334/mcp`
 
 ### One-command MCP setup
 
@@ -85,23 +78,24 @@ OpenGRC includes a localhost MCP endpoint so Cursor/Claude-style agents can:
 npm run cursor:deploy
 ```
 
-Key URL:
-- `http://127.0.0.1:3334/mcp`
+This builds and starts the **Docker** stack, waits for API health (via `/api` on port 8080), then starts the host MCP HTTP daemon.
+
+Point `OPEN_GRC_API_URL` at the API through the web proxy, e.g. `http://127.0.0.1:8080/api` (see [docs/MCP_SERVER.md](docs/MCP_SERVER.md)).
 
 Recommended agent flow:
-1. `mcp_capabilities_v1`
+
+1. `capabilities_v1`
 2. `frmr_taxonomy_v1` (`pathType: "20x"`)
 3. `gap_closure_execution_brief_v1`
 4. `compliance_agent_autopilot_v1` (`executionMode: "apply"`)
 5. `fedramp_oscal_report_v1`
 
-Full MCP details: `docs/MCP_SERVER.md`
+Full MCP details: [docs/MCP_SERVER.md](docs/MCP_SERVER.md)
 
-## Deployment Options
+## Deployment
 
-- **Local / self-hosted (recommended):** `docker compose up --build`
-- **Production-style compose:** see `docker-compose.prod.yml` and `docs/PRODUCTION.md`
-- **Desktop mode (optional):** see `docs/DESKTOP.md`
+- **Self-hosted:** use `docker compose up --build` and optionally put Caddy, nginx, or Traefik in front for TLS. See [docs/PRODUCTION.md](docs/PRODUCTION.md).
+- **Optional desktop shell:** [docs/DESKTOP.md](docs/DESKTOP.md)
 
 ## Useful Commands
 
@@ -113,26 +107,27 @@ npm run test:autoscope
 npm run test:mcp
 ```
 
-`test:e2e` expects the API at `API_URL` (default `http://localhost:3000`). It exercises versions, project bootstrap, POA&M sync, and evidence-gap reporting.
+`test:e2e` expects the API at `API_URL` (default `http://localhost:3000` for local Node dev). If you only use Docker, set `API_URL=http://localhost:8080/api` before running smoke tests.
 
-Agent-oriented notes (API conventions, MCP, migrations): see `AGENTS.md`. Local diagnostics UI: **Local ops** in the sidebar (`/ops`).
+Agent-oriented notes (API conventions, MCP, migrations): [AGENTS.md](AGENTS.md). **Operations** diagnostics (API version, DB mode, paths, FRMR): sidebar **Ops** (`/ops`). With Postgres, ops shows connection metadata—not a SQLite file path.
 
 ## Notes
 
 - OpenGRC supports compliance workflows; it does not grant authorization by itself.
-- FedRAMP decisions remain with assessors and authorizing officials.
+- FedRAMP authorization decisions remain with assessors and authorizing officials.
 - Keep secrets out of source control; use environment variables.
 
 ## Docs
 
-- `AGENTS.md` (AI coding agents and API conventions)
-- `docs/PRODUCTION.md`
-- `docs/AUTO_SCOPING.md`
-- `docs/MCP_SERVER.md`
-- `docs/BACKUP.md`
-- `docs/DESKTOP.md`
+- [AGENTS.md](AGENTS.md) — AI coding agents and API conventions
+- [ARCHITECTURE.md](ARCHITECTURE.md) — system layout
+- [CONTRIBUTING.md](CONTRIBUTING.md) — how to develop
+- [docs/PRODUCTION.md](docs/PRODUCTION.md) — TLS, env, operations
+- [docs/AUTO_SCOPING.md](docs/AUTO_SCOPING.md)
+- [docs/MCP_SERVER.md](docs/MCP_SERVER.md)
+- [docs/BACKUP.md](docs/BACKUP.md)
+- [docs/DESKTOP.md](docs/DESKTOP.md)
 
 ## License
 
-Apache-2.0 - see `LICENSE`.
-
+Apache-2.0 — see [LICENSE](LICENSE).

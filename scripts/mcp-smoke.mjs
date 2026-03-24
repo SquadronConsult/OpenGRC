@@ -40,7 +40,7 @@ async function run() {
     scanner: 'mcp-smoke',
   });
   if (!sync || typeof sync !== 'object') {
-    throw new Error('sync_grc_evidence helper failed');
+    throw new Error('sync_grc_evidence_v1 helper failed');
   }
 
   const taxonomy = await grcModule.getFrmrTaxonomy({ pathType: '20x' });

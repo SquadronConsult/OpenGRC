@@ -14,6 +14,7 @@ import {
   Menu,
   FileText,
   Layers,
+  Plug,
 } from 'lucide-react';
 import { AuthProvider } from '@/components/AuthProvider';
 import { AuthShell } from '@/components/AuthShell';
@@ -38,6 +39,7 @@ const navSections: { section: string; links: NavItem[] }[] = [
     section: 'Workspace',
     links: [
       { href: '/projects', label: 'Projects', icon: LayoutGrid },
+      { href: '/mcp', label: 'MCP Connect', icon: Plug },
       { href: '/ops', label: 'Ops', icon: Settings2 },
     ],
   },

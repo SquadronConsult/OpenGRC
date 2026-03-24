@@ -8,6 +8,7 @@ import {
   JoinColumn,
   OneToMany,
 } from 'typeorm';
+import { datetimeColumnType } from '../db/column-types';
 import { Project } from './project.entity';
 import { User } from './user.entity';
 import { PolicyVersion } from './policy-version.entity';
@@ -62,10 +63,10 @@ export class Policy {
   @Column({ type: 'text' })
   content: string;
 
-  @Column({ name: 'effective_date', type: 'datetime', nullable: true })
+  @Column({ name: 'effective_date', type: datetimeColumnType, nullable: true })
   effectiveDate: Date | null;
 
-  @Column({ name: 'next_review_date', type: 'datetime', nullable: true })
+  @Column({ name: 'next_review_date', type: datetimeColumnType, nullable: true })
   nextReviewDate: Date | null;
 
   @OneToMany(() => PolicyVersion, (v) => v.policy)

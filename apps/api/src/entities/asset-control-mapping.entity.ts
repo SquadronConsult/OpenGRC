@@ -4,11 +4,14 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Asset } from './asset.entity';
 import { InternalControl } from './internal-control.entity';
 
 @Entity('asset_control_mappings')
+@Index(['assetId'])
+@Index(['internalControlId'])
 export class AssetControlMapping {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -20,7 +23,7 @@ export class AssetControlMapping {
   @JoinColumn({ name: 'asset_id' })
   asset: Asset;
 
-  @Column({ name: 'internal_control_id' })
+  @Column({ name: 'internal_control_id', type: 'uuid' })
   internalControlId: string;
 
   @ManyToOne(() => InternalControl, { onDelete: 'CASCADE' })

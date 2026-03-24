@@ -8,6 +8,8 @@ import {
   OneToMany,
   Index,
 } from 'typeorm';
+import { datetimeColumnType } from '../db/column-types';
+import { RiskAcceptanceRequestStatus } from './enums/grc-enums';
 import { Risk } from './risk.entity';
 import { Project } from './project.entity';
 import { User } from './user.entity';
@@ -35,17 +37,22 @@ export class RiskAcceptanceRequest {
   project: Project;
 
   /** draft | submitted | approved | rejected | cancelled */
-  @Column({ type: 'varchar', default: 'draft' })
-  status: string;
+  @Column({
+    type: 'varchar',
+    length: 24,
+    enum: RiskAcceptanceRequestStatus,
+    default: RiskAcceptanceRequestStatus.Draft,
+  })
+  status: RiskAcceptanceRequestStatus;
 
-  @Column({ name: 'submitted_by_id', nullable: true })
+  @Column({ name: 'submitted_by_id', type: 'varchar', nullable: true })
   submittedById: string | null;
 
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'submitted_by_id' })
   submittedBy: User | null;
 
-  @Column({ name: 'submitted_at', type: 'datetime', nullable: true })
+  @Column({ name: 'submitted_at', type: datetimeColumnType, nullable: true })
   submittedAt: Date | null;
 
   @Column({ type: 'text', nullable: true })

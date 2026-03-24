@@ -5,6 +5,7 @@ import { Project } from '../entities/project.entity';
 import { FrrRequirement } from '../entities/frr-requirement.entity';
 import { KsiIndicator } from '../entities/ksi-indicator.entity';
 import { ChecklistItem } from '../entities/checklist-item.entity';
+import { ChecklistItemStatus } from '../entities/enums/grc-enums';
 import { EvidenceItem } from '../entities/evidence-item.entity';
 import { FrmrVersion } from '../entities/frmr-version.entity';
 import { FrmrCatalogSyncService } from '../catalog/frmr-catalog-sync.service';
@@ -97,7 +98,7 @@ export class ChecklistService {
           projectId,
           frrRequirementId: r.id,
           catalogRequirementId: catalogReq?.id ?? null,
-          status: 'not_started',
+          status: ChecklistItemStatus.NotStarted,
           ...(due ? { dueDate: due } : {}),
         }),
       );
@@ -119,7 +120,7 @@ export class ChecklistService {
             projectId,
             ksiIndicatorId: k.id,
             catalogRequirementId: catalogReq?.id ?? null,
-            status: 'not_started',
+            status: ChecklistItemStatus.NotStarted,
           }),
         );
         created++;

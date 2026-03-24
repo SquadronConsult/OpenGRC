@@ -3,13 +3,7 @@
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { useAuth } from '@/components/AuthProvider';
-
-function isPublicPath(pathname: string): boolean {
-  if (pathname === '/') return true;
-  if (pathname.startsWith('/login')) return true;
-  if (pathname.startsWith('/bootstrap')) return true;
-  return false;
-}
+import { isPublicPath } from '@/lib/auth-utils';
 
 export function AuthShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -17,7 +11,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
 
   if (!isPublicPath(pathname) && loading) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center' }} className="text-muted">
+      <div className="p-12 text-center text-muted">
         Loading…
       </div>
     );

@@ -60,7 +60,10 @@ export default function ProjectsPage() {
   function load() {
     api<Project[] | PaginatedList<Project>>('/projects?limit=200')
       .then((r) => setList(listItems(r)))
-      .catch(() => setList([]));
+      .catch((e: unknown) => {
+        toast.error(e instanceof Error ? e.message : 'Failed to load projects');
+        setList([]);
+      });
   }
 
   useEffect(() => {
@@ -154,7 +157,7 @@ export default function ProjectsPage() {
                   <Label htmlFor="proj-path">FedRAMP Path</Label>
                   <select
                     id="proj-path"
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    className="flex h-9 w-full rounded-md border border-input bg-card px-3 py-1 text-sm text-foreground shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                     value={pathType}
                     onChange={(e) => setPathType(e.target.value as '20x' | 'rev5')}
                   >
@@ -166,7 +169,7 @@ export default function ProjectsPage() {
                   <Label htmlFor="proj-impact">Impact Level</Label>
                   <select
                     id="proj-impact"
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    className="flex h-9 w-full rounded-md border border-input bg-card px-3 py-1 text-sm text-foreground shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                     value={impact}
                     onChange={(e) => setImpact(e.target.value as 'low' | 'moderate' | 'high')}
                   >

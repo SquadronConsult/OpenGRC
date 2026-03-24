@@ -19,6 +19,7 @@ import { AuditService } from '../audit/audit.service';
 import { DataSource } from 'typeorm';
 import { PatchChecklistItemDto } from './dto/patch-checklist-item.dto';
 import { BulkChecklistPatchDto } from './dto/bulk-checklist.dto';
+import { ChecklistItemStatus } from '../entities/enums/grc-enums';
 
 @ApiTags('checklist-items')
 @Controller('checklist-items')
@@ -53,7 +54,8 @@ export class ChecklistItemsController {
           req.user.userId,
           req.user.role,
         );
-        if (b.status != null) item.status = b.status;
+        if (b.status != null)
+          item.status = b.status as ChecklistItemStatus;
         if (b.ownerUserId !== undefined)
           item.ownerUserId = b.ownerUserId || null;
         if (b.dueDate !== undefined)
@@ -90,7 +92,7 @@ export class ChecklistItemsController {
       req.user.role,
     );
     const prev = { ...item };
-    if (b.status != null) item.status = b.status;
+    if (b.status != null) item.status = b.status as ChecklistItemStatus;
     if (b.ownerUserId !== undefined) item.ownerUserId = b.ownerUserId || null;
     if (b.dueDate !== undefined)
       item.dueDate = b.dueDate ? new Date(b.dueDate) : null;

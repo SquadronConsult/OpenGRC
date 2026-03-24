@@ -499,7 +499,7 @@ export default function ProjectDetailPage({
                 </TableCell>
                 <TableCell className="align-top">
                   <select
-                    className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+                    className="h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground"
                     value={i.status}
                     onChange={(e) => setStatus(i.id, e.target.value)}
                     aria-label="Compliance status"

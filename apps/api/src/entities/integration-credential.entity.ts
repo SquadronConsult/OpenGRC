@@ -7,6 +7,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { datetimeColumnType } from '../db/column-types';
 import { Project } from './project.entity';
 
 @Entity('integration_credentials')
@@ -14,7 +15,7 @@ export class IntegrationCredential {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'project_id' })
+  @Column({ name: 'project_id', type: 'uuid' })
   projectId: string;
 
   @ManyToOne(() => Project, { onDelete: 'CASCADE' })
@@ -40,7 +41,7 @@ export class IntegrationCredential {
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;
 
-  @Column({ name: 'last_used_at', type: 'datetime', nullable: true })
+  @Column({ name: 'last_used_at', type: datetimeColumnType, nullable: true })
   lastUsedAt: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })

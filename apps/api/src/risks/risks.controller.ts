@@ -17,6 +17,7 @@ import { AuditService } from '../audit/audit.service';
 import { RiskService } from './risk.service';
 import { ProjectsService } from '../projects/projects.service';
 import { Risk } from '../entities/risk.entity';
+import { RiskStatus } from '../entities/enums/grc-enums';
 import { RiskListQueryDto } from './dto/risk-list-query.dto';
 import { skipTakeFromPageLimit } from '../common/dto/page-limit-query.dto';
 import { parseSortParam } from '../common/sort/parse-sort';
@@ -95,7 +96,8 @@ export class RisksController {
           where: { id, projectId },
         });
         if (!row) continue;
-        if (b.patch.status != null) row.status = b.patch.status;
+        if (b.patch.status != null)
+          row.status = b.patch.status as RiskStatus;
         if (b.patch.ownerUserId !== undefined)
           row.ownerUserId = b.patch.ownerUserId;
         await em.save(row);

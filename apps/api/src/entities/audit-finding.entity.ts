@@ -7,6 +7,8 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
+import { datetimeColumnType } from '../db/column-types';
+import { AuditFindingSeverity, AuditFindingStatus } from './enums/grc-enums';
 import { GrcAudit } from './grc-audit.entity';
 import { ChecklistItem } from './checklist-item.entity';
 
@@ -22,11 +24,11 @@ export class AuditFinding {
   @JoinColumn({ name: 'audit_id' })
   audit: GrcAudit;
 
-  @Column({ type: 'varchar' })
-  severity: string;
+  @Column({ type: 'varchar', length: 24, enum: AuditFindingSeverity })
+  severity: AuditFindingSeverity;
 
-  @Column({ type: 'varchar' })
-  status: 'open' | 'remediation' | 'closed' | 'risk_accepted';
+  @Column({ type: 'varchar', length: 24, enum: AuditFindingStatus })
+  status: AuditFindingStatus;
 
   @Column({ name: 'checklist_item_id', type: 'varchar', nullable: true })
   checklistItemId: string | null;
@@ -44,7 +46,7 @@ export class AuditFinding {
   @Column({ name: 'remediation_plan', type: 'text', nullable: true })
   remediationPlan: string | null;
 
-  @Column({ name: 'due_date', type: 'datetime', nullable: true })
+  @Column({ name: 'due_date', type: datetimeColumnType, nullable: true })
   dueDate: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })

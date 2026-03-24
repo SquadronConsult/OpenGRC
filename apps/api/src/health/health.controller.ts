@@ -55,24 +55,48 @@ export class HealthController {
   @Get('ops')
   @ApiOperation({ summary: 'Operator diagnostics (local)' })
   async ops() {
-    const sqlitePath = resolveSqlitePathForHealth();
+    const dbType = process.env.DB_TYPE || 'sqlite';
     const evidenceDir = process.env.EVIDENCE_DIR || join(process.cwd(), 'evidence');
     const localDataDir = process.env.LOCAL_DATA_DIR || process.cwd();
+
+    let sqlitePath: string | null = null;
     let sqliteBytes: number | null = null;
-    try {
-      const st = await stat(sqlitePath);
-      sqliteBytes = st.size;
-    } catch {
-      sqliteBytes = null;
+    let postgres: {
+      host: string;
+      port: number;
+      database: string;
+      username: string;
+    } | null = null;
+
+    if (dbType === 'postgres') {
+      const o = this.ds.options;
+      if (o.type === 'postgres') {
+        postgres = {
+          host: typeof o.host === 'string' ? o.host : 'localhost',
+          port: typeof o.port === 'number' ? o.port : 5432,
+          database: typeof o.database === 'string' ? o.database : 'grc',
+          username: typeof o.username === 'string' ? o.username : '',
+        };
+      }
+    } else {
+      sqlitePath = resolveSqlitePathForHealth();
+      try {
+        const st = await stat(sqlitePath);
+        sqliteBytes = st.size;
+      } catch {
+        sqliteBytes = null;
+      }
     }
+
     const latest = await this.frmr.getLatestVersion();
     const versions = await this.frmr.listVersions();
     return {
       apiVersion: OPENGRC_API_VERSION,
       schemaVersion: OPENGRC_SCHEMA_VERSION,
-      dbType: process.env.DB_TYPE || 'sqlite',
+      dbType,
       sqlitePath,
       sqliteBytes,
+      postgres,
       evidenceDir,
       localDataDir,
       frmrLoaded: !!latest,

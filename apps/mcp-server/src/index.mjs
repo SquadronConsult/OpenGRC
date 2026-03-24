@@ -216,7 +216,7 @@ function buildRemediationPlan({ gaps = [], inventory = {}, strategy = 'balanced'
         },
       },
       {
-        tool: 'validate_remediation',
+        tool: 'validate_remediation_v1',
         why: 'Run bounded validation after remediation edits',
         inputTemplate: {
           commands: ['npm run build', 'npm run test'],
@@ -583,9 +583,9 @@ async function runValidationCommands(commands = [], workspaceRoot = config.works
 
 const tools = [
   {
-    name: 'mcp_capabilities_v1',
+    name: 'capabilities_v1',
     description:
-      'Help tool that explains OpenGRC MCP workflows, prerequisites, and recommended tool usage patterns.',
+      'START HERE. Help tool that explains OpenGRC MCP workflows, prerequisites, and recommended tool usage patterns.',
     inputSchema: {
       type: 'object',
       additionalProperties: false,
@@ -599,7 +599,7 @@ const tools = [
     },
   },
   {
-    name: 'repo_inventory',
+    name: 'repo_inventory_v1',
     description:
       'Discover languages, frameworks, IaC footprint, and security signals for a repository.',
     inputSchema: {
@@ -615,7 +615,7 @@ const tools = [
     },
   },
   {
-    name: 'control_gap_map',
+    name: 'control_gap_map_v1',
     description: 'Map repository/security signals to likely control gaps and priorities.',
     inputSchema: {
       type: 'object',
@@ -628,7 +628,7 @@ const tools = [
     },
   },
   {
-    name: 'remediation_plan',
+    name: 'remediation_plan_v1',
     description: 'Generate ordered remediation plan from control gaps and inventory context.',
     inputSchema: {
       type: 'object',
@@ -642,7 +642,7 @@ const tools = [
     },
   },
   {
-    name: 'apply_remediation',
+    name: 'apply_remediation_v1',
     description:
       'Apply bounded file edits with guardrails, audit logs, and rollback checkpointing.',
     inputSchema: {
@@ -675,7 +675,7 @@ const tools = [
     },
   },
   {
-    name: 'dry_run_remediation',
+    name: 'dry_run_remediation_v1',
     description:
       'Validate remediation change set against guardrails without writing files.',
     inputSchema: {
@@ -706,7 +706,7 @@ const tools = [
     },
   },
   {
-    name: 'validate_remediation',
+    name: 'validate_remediation_v1',
     description: 'Run safe validation commands (allowlisted) against workspace changes.',
     inputSchema: {
       type: 'object',
@@ -725,7 +725,7 @@ const tools = [
     },
   },
   {
-    name: 'sync_grc_evidence',
+    name: 'sync_grc_evidence_v1',
     description:
       'Push remediation/security evidence summary into OpenGRC integrations endpoint.',
     inputSchema: {
@@ -860,7 +860,8 @@ const tools = [
   },
   {
     name: 'connectors_registry_v1',
-    description: 'List built-in evidence connector types (id, version) for automation.',
+    description:
+      'Connectors are automated evidence-collection integrations that pull scanner or repo artifacts into OpenGRC. List built-in connector types (id, version) available for a project.',
     inputSchema: {
       type: 'object',
       additionalProperties: false,
@@ -870,7 +871,8 @@ const tools = [
   },
   {
     name: 'connectors_list_v1',
-    description: 'List connector instances configured for a project (secrets redacted).',
+    description:
+      'Connectors are automated evidence-collection integrations. List configured instances for a project (secrets redacted).',
     inputSchema: {
       type: 'object',
       additionalProperties: false,
@@ -881,7 +883,7 @@ const tools = [
   {
     name: 'connectors_status_v1',
     description:
-      'Summarize connector health, stale automated evidence flags, and last run errors.',
+      'Connectors are automated evidence-collection integrations. Summarize health, stale evidence flags, and last run errors.',
     inputSchema: {
       type: 'object',
       additionalProperties: false,
@@ -891,7 +893,8 @@ const tools = [
   },
   {
     name: 'connectors_run_v1',
-    description: 'Trigger a manual collection run for one connector instance.',
+    description:
+      'Connectors are automated evidence-collection integrations. Trigger a manual collection run for one instance.',
     inputSchema: {
       type: 'object',
       additionalProperties: false,
@@ -904,7 +907,8 @@ const tools = [
   },
   {
     name: 'connectors_runs_v1',
-    description: 'Inspect recent run history for a connector instance.',
+    description:
+      'Connectors are automated evidence-collection integrations. Inspect recent run history for one instance.',
     inputSchema: {
       type: 'object',
       additionalProperties: false,
@@ -918,7 +922,8 @@ const tools = [
   },
   {
     name: 'connectors_create_v1',
-    description: 'Create a connector instance (GitHub, synthetic, AWS, etc.) with JSON config.',
+    description:
+      'Connectors are automated evidence-collection integrations. Create an instance (e.g. GitHub, synthetic, AWS) with JSON config.',
     inputSchema: {
       type: 'object',
       additionalProperties: false,
@@ -959,7 +964,8 @@ const tools = [
   },
   {
     name: 'frmr_taxonomy_v1',
-    description: 'Fetch FRMR process/requirement/KSI taxonomy for 20x or rev5 planning.',
+    description:
+      'Fetch FedRAMP Requirements and Metrics Repository (FRMR) taxonomy: processes, requirements, and Key Security Indicators (KSI). pathType 20x = FedRAMP 20x authorization path; rev5 = FedRAMP Rev 5 baseline. Use before planning or reporting.',
     inputSchema: {
       type: 'object',
       additionalProperties: false,
@@ -1014,7 +1020,7 @@ const tools = [
   {
     name: 'compliance_agent_autopilot_v1',
     description:
-      'Autopilot compliance orchestration: repo inventory -> gap map -> remediation plan -> ensure project/link/evidence/auto-scope chain.',
+      'RECOMMENDED. Compliance autopilot: scan repo inventory, map gaps to controls, build remediation plan, optionally create or use an OpenGRC project, upsert evidence, trigger auto-scope. executionMode analyze=dry analysis; dry_run=validate edits; apply=write files and run linkage. Abbreviations: FRMR=FedRAMP Requirements and Metrics Repository; KSI=Key Security Indicator; API=OpenGRC REST API.',
     inputSchema: {
       type: 'object',
       additionalProperties: false,
@@ -1054,7 +1060,7 @@ const tools = [
   {
     name: 'fedramp_oscal_report_v1',
     description:
-      'Package machine-readable FedRAMP handoff output with OSCAL SSP JSON, OSCAL POA&M JSON, and closure manifest.',
+      'Package FedRAMP assessor handoff: OSCAL (Open Security Controls Assessment Language) artifacts including SSP (System Security Plan) JSON, POA&M (Plan of Action and Milestones) JSON, and a closure manifest.',
     inputSchema: {
       type: 'object',
       additionalProperties: false,
@@ -1071,7 +1077,7 @@ const tools = [
   {
     name: 'gap_closure_execution_brief_v1',
     description:
-      'Generate strict gap-closure execution brief with FRMR targets, proposed file changes, and validation commands.',
+      'Generate a strict gap-closure brief: FRMR (FedRAMP Requirements and Metrics Repository) and KSI (Key Security Indicator) targets, proposed file edits, validation commands, and next MCP calls before applying changes.',
     inputSchema: {
       type: 'object',
       additionalProperties: false,
@@ -1085,7 +1091,7 @@ const tools = [
     },
   },
   {
-    name: 'list_skills',
+    name: 'list_skills_v1',
     description: 'List available control/remediation skills from MCP skill registry.',
     inputSchema: {
       type: 'object',
@@ -1094,7 +1100,7 @@ const tools = [
     },
   },
   {
-    name: 'run_skill_agent',
+    name: 'run_skill_agent_v1',
     description:
       'Select and execute skill playbook recommendations for a control objective.',
     inputSchema: {
@@ -1108,7 +1114,7 @@ const tools = [
     },
   },
   {
-    name: 'get_run_log',
+    name: 'get_run_log_v1',
     description: 'Retrieve audit timeline for a remediation run.',
     inputSchema: {
       type: 'object',
@@ -1120,7 +1126,7 @@ const tools = [
     },
   },
   {
-    name: 'rollback_run',
+    name: 'rollback_run_v1',
     description: 'Rollback all tracked file edits for a run checkpoint.',
     inputSchema: {
       type: 'object',
@@ -1155,7 +1161,7 @@ function createProtocolServer() {
     const args = request?.params?.arguments || {};
 
     try {
-      if (name === 'mcp_capabilities_v1') {
+      if (name === 'capabilities_v1') {
         const objective = String(args.objective || '').trim();
         const objectiveHint = objective
           ? {
@@ -1243,19 +1249,19 @@ function createProtocolServer() {
             },
           ],
           quickPromptTemplate:
-            'Call mcp_capabilities_v1, then frmr_taxonomy_v1, then gap_closure_execution_brief_v1, then compliance_agent_autopilot_v1 with executionMode=apply, then fedramp_oscal_report_v1.',
+            'Call capabilities_v1, then frmr_taxonomy_v1, then gap_closure_execution_brief_v1, then compliance_agent_autopilot_v1 with executionMode=apply, then fedramp_oscal_report_v1.',
           ...(objectiveHint ? { objectiveHint } : {}),
         });
       }
 
-      if (name === 'repo_inventory') {
+      if (name === 'repo_inventory_v1') {
         const workspaceRoot = resolveWorkspaceRoot(args);
         const root = resolveTargetPath(workspaceRoot, args.path);
         const inventory = await scanRepoInventory(root);
         return textResult(inventory);
       }
 
-      if (name === 'control_gap_map') {
+      if (name === 'control_gap_map_v1') {
         const gaps = makeControlGaps(args.inventory || {});
         return textResult({
           framework: args.framework || 'fedramp',
@@ -1264,7 +1270,7 @@ function createProtocolServer() {
         });
       }
 
-      if (name === 'remediation_plan') {
+      if (name === 'remediation_plan_v1') {
         const plan = buildRemediationPlan({
           gaps: args.gaps || [],
           inventory: args.inventory || {},
@@ -1273,7 +1279,7 @@ function createProtocolServer() {
         return textResult(plan);
       }
 
-      if (name === 'apply_remediation') {
+      if (name === 'apply_remediation_v1') {
         const workspaceRoot = resolveWorkspaceRoot(args);
         const changes = Array.isArray(args.changes) ? args.changes : [];
         assertStepBudget(changes.length);
@@ -1307,7 +1313,7 @@ function createProtocolServer() {
         });
       }
 
-      if (name === 'dry_run_remediation') {
+      if (name === 'dry_run_remediation_v1') {
         const workspaceRoot = resolveWorkspaceRoot(args);
         const changes = Array.isArray(args.changes) ? args.changes : [];
         assertStepBudget(changes.length);
@@ -1324,7 +1330,7 @@ function createProtocolServer() {
         });
       }
 
-      if (name === 'validate_remediation') {
+      if (name === 'validate_remediation_v1') {
         const workspaceRoot = resolveWorkspaceRoot(args);
         const commands =
           Array.isArray(args.commands) && args.commands.length
@@ -1337,7 +1343,7 @@ function createProtocolServer() {
         });
       }
 
-      if (name === 'sync_grc_evidence') {
+      if (name === 'sync_grc_evidence_v1') {
         const result = await syncGrcEvidence(args);
         return textResult(result);
       }
@@ -1758,14 +1764,14 @@ function createProtocolServer() {
         });
       }
 
-      if (name === 'list_skills') {
+      if (name === 'list_skills_v1') {
         return textResult({
           count: skillCatalog.length,
           skills: skillCatalog,
         });
       }
 
-      if (name === 'run_skill_agent') {
+      if (name === 'run_skill_agent_v1') {
         const objective = String(args.objective || '');
         const inventory = args.inventory || {};
         const selected = selectSkills({ objective, inventory });
@@ -1782,12 +1788,12 @@ function createProtocolServer() {
         });
       }
 
-      if (name === 'get_run_log') {
+      if (name === 'get_run_log_v1') {
         const logs = await readRunLog(args.runId);
         return textResult({ runId: args.runId, events: logs });
       }
 
-      if (name === 'rollback_run') {
+      if (name === 'rollback_run_v1') {
         const result = await rollbackRun(args.runId);
         return textResult(result);
       }
@@ -1889,7 +1895,7 @@ app.delete(config.httpPath, async (req, res) => {
 });
 
 const server = app.listen(config.httpPort, config.httpHost, () => {
-  console.error(
+  console.log(
     `open-grc-mcp listening on http://${config.httpHost}:${config.httpPort}${config.httpPath}`,
   );
 });

@@ -13,6 +13,8 @@ import {
   XCircle,
   Circle,
   ArrowRight,
+  AlertCircle,
+  Plug,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,8 +22,12 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ReadinessGauge } from '@/components/compliance/ReadinessGauge';
 import { DeadlineChip } from '@/components/compliance/DeadlineChip';
-import McpConnectCard from '@/components/McpConnectCard';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
+function apiErrorMessage(err: unknown): string {
+  if (err instanceof Error && err.message) return err.message;
+  return 'Request failed';
+}
 
 interface DashboardStats {
   projects: number;
@@ -72,18 +78,37 @@ const statCards = [
 export default function Home() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
+  const [statsError, setStatsError] = useState<string | null>(null);
+  const [activityError, setActivityError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [mcpOpen, setMcpOpen] = useState(false);
-
   useEffect(() => {
-    Promise.all([
-      api<DashboardStats>('/dashboard/stats').catch(() => null),
-      api<ActivityEntry[]>('/activity/recent?limit=8').catch(() => []),
-    ]).then(([s, a]) => {
-      setStats(s);
-      setActivity(a);
+    let cancelled = false;
+    (async () => {
+      const results = await Promise.allSettled([
+        api<DashboardStats>('/dashboard/stats'),
+        api<ActivityEntry[]>('/activity/recent?limit=8'),
+      ]);
+      if (cancelled) return;
+      const [statsRes, activityRes] = results;
+      if (statsRes.status === 'fulfilled') {
+        setStats(statsRes.value);
+        setStatsError(null);
+      } else {
+        setStats(null);
+        setStatsError(apiErrorMessage(statsRes.reason));
+      }
+      if (activityRes.status === 'fulfilled') {
+        setActivity(activityRes.value);
+        setActivityError(null);
+      } else {
+        setActivity([]);
+        setActivityError(apiErrorMessage(activityRes.reason));
+      }
       setLoading(false);
-    });
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (loading) {
@@ -108,6 +133,16 @@ export default function Home() {
 
   return (
     <div className="animate-in fade-in duration-300 space-y-6">
+      {(statsError || activityError) && (
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" aria-hidden="true" />
+          <AlertTitle>Could not load some dashboard data</AlertTitle>
+          <AlertDescription>
+            {statsError ? <p>{statsError}</p> : null}
+            {activityError ? <p>{activityError}</p> : null}
+          </AlertDescription>
+        </Alert>
+      )}
       {/* Top row: Readiness gauge + Quick actions */}
       <div className="flex flex-col items-start gap-6 md:flex-row">
         <Card className="flex flex-col items-center px-8 py-6">
@@ -222,17 +257,26 @@ export default function Home() {
         </Button>
       </div>
 
-      {/* MCP Connect - collapsed by default */}
-      <Collapsible open={mcpOpen} onOpenChange={setMcpOpen}>
-        <CollapsibleTrigger asChild>
-          <button className="w-full rounded-lg border border-border px-4 py-2.5 text-left text-xs text-muted-foreground transition-colors hover:bg-accent">
-            {mcpOpen ? 'Hide' : 'Show'} MCP Connection Settings
-          </button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="mt-2">
-          <McpConnectCard />
-        </CollapsibleContent>
-      </Collapsible>
+      {/* MCP — primary setup lives on /mcp (sidebar) */}
+      <Card className="border-primary/25 bg-primary/5">
+        <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+              <Plug className="h-4 w-4" aria-hidden />
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Connect AI agents (MCP)</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Install the OpenGRC MCP server in Cursor and point it at the local daemon—tools for
+                projects, gaps, FRMR, and OSCAL.
+              </p>
+            </div>
+          </div>
+          <Button asChild className="shrink-0 sm:ml-4">
+            <Link href="/mcp">Open MCP Connect</Link>
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

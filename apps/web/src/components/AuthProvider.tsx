@@ -11,12 +11,14 @@ import {
   type ReactNode,
 } from 'react';
 import { api, clearAuthToken, getToken } from '@/lib/api';
+import { isPublicPath } from '@/lib/auth-utils';
 
 export type AuthUser = {
   id: string;
   email: string;
   name: string | null;
   role: string;
+  mustChangePassword?: boolean;
 };
 
 type AuthState = {
@@ -26,13 +28,6 @@ type AuthState = {
 };
 
 const AuthContext = createContext<AuthState | null>(null);
-
-function isPublicPath(pathname: string): boolean {
-  if (pathname === '/') return true;
-  if (pathname.startsWith('/login')) return true;
-  if (pathname.startsWith('/bootstrap')) return true;
-  return false;
-}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -68,7 +63,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (async () => {
       try {
         const me = await api<AuthUser>('/auth/me', { skipAuthRedirect: true });
-        if (!cancelled) setUser(me);
+        if (!cancelled) {
+          if (
+            me.mustChangePassword &&
+            !pathname.startsWith('/change-password')
+          ) {
+            router.replace(
+              `/change-password?next=${encodeURIComponent(pathname)}`,
+            );
+            return;
+          }
+          if (
+            !me.mustChangePassword &&
+            pathname.startsWith('/change-password')
+          ) {
+            router.replace('/projects');
+            return;
+          }
+          setUser(me);
+        }
       } catch {
         if (!cancelled) {
           setUser(null);

@@ -6,6 +6,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
+import { datetimeColumnType } from '../db/column-types';
 import { User } from './user.entity';
 
 @Entity('notifications')
@@ -26,8 +27,8 @@ export class Notification {
   @Column({ type: 'simple-json' })
   payload: Record<string, unknown>;
 
-  @Column({ name: 'read_at', type: 'datetime', nullable: true })
-  readAt: Date;
+  @Column({ name: 'read_at', type: datetimeColumnType, nullable: true })
+  readAt: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

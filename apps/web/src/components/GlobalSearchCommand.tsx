@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   CommandDialog,
   CommandEmpty,
@@ -57,7 +58,10 @@ export function GlobalSearchCommand() {
         `/search?q=${encodeURIComponent(q)}&limit=30`,
       )
         .then((r) => setItems(r.items ?? []))
-        .catch(() => setItems([]))
+        .catch((e: unknown) => {
+          toast.error(e instanceof Error ? e.message : 'Search failed');
+          setItems([]);
+        })
         .finally(() => setLoading(false));
     }, 200);
     return () => clearTimeout(t);

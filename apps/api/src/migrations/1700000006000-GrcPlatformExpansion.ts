@@ -6,18 +6,20 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     const driver = queryRunner.connection.options.type;
     const isSqlite = driver === 'sqlite';
+    const catalogUuidType = isSqlite ? 'varchar(36)' : 'uuid';
+    const uuidType = isSqlite ? 'varchar(36)' : 'uuid';
 
     if (isSqlite) {
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "policies" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "project_id" varchar(36),
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "project_id" ${uuidType},
           "title" varchar NOT NULL,
           "version" varchar NOT NULL DEFAULT '1.0.0',
           "status" varchar NOT NULL,
           "category" varchar,
-          "owner_user_id" varchar(36),
-          "approver_user_id" varchar(36),
+          "owner_user_id" ${uuidType},
+          "approver_user_id" ${uuidType},
           "content" text NOT NULL,
           "effective_date" datetime,
           "next_review_date" datetime,
@@ -34,12 +36,12 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "policy_versions" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "policy_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "policy_id" ${uuidType} NOT NULL,
           "version_number" varchar NOT NULL,
           "content" text NOT NULL,
           "change_description" text,
-          "author_user_id" varchar(36),
+          "author_user_id" ${uuidType},
           "created_at" datetime NOT NULL DEFAULT (datetime('now')),
           CONSTRAINT "FK_pv_policy" FOREIGN KEY ("policy_id") REFERENCES "policies" ("id") ON DELETE CASCADE,
           CONSTRAINT "FK_pv_author" FOREIGN KEY ("author_user_id") REFERENCES "users" ("id") ON DELETE SET NULL
@@ -51,10 +53,10 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "policy_control_mappings" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "policy_id" varchar(36) NOT NULL,
-          "catalog_requirement_id" varchar(36),
-          "internal_control_id" varchar(36),
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "policy_id" ${uuidType} NOT NULL,
+          "catalog_requirement_id" ${catalogUuidType},
+          "internal_control_id" ${catalogUuidType},
           CONSTRAINT "FK_pcm_policy" FOREIGN KEY ("policy_id") REFERENCES "policies" ("id") ON DELETE CASCADE,
           CONSTRAINT "FK_pcm_cat" FOREIGN KEY ("catalog_requirement_id") REFERENCES "catalog_requirements" ("id") ON DELETE SET NULL,
           CONSTRAINT "FK_pcm_ic" FOREIGN KEY ("internal_control_id") REFERENCES "internal_controls" ("id") ON DELETE SET NULL
@@ -63,10 +65,10 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "policy_attestations" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "policy_id" varchar(36) NOT NULL,
-          "policy_version_id" varchar(36),
-          "user_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "policy_id" ${uuidType} NOT NULL,
+          "policy_version_id" ${uuidType},
+          "user_id" ${uuidType} NOT NULL,
           "attested_at" datetime,
           "expires_at" datetime,
           "status" varchar NOT NULL,
@@ -82,8 +84,8 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "compliance_snapshots" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "project_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "project_id" ${uuidType} NOT NULL,
           "captured_at" datetime NOT NULL,
           "total_controls" integer NOT NULL,
           "compliant" integer NOT NULL,
@@ -103,14 +105,14 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "control_test_results" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "project_id" varchar(36) NOT NULL,
-          "checklist_item_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "project_id" ${uuidType} NOT NULL,
+          "checklist_item_id" ${uuidType} NOT NULL,
           "test_type" varchar NOT NULL,
           "result" varchar NOT NULL,
           "tested_at" datetime,
           "next_test_date" datetime,
-          "connector_run_id" varchar(36),
+          "connector_run_id" ${uuidType},
           "created_at" datetime NOT NULL DEFAULT (datetime('now')),
           CONSTRAINT "FK_ctr_project" FOREIGN KEY ("project_id") REFERENCES "projects" ("id") ON DELETE CASCADE,
           CONSTRAINT "FK_ctr_ci" FOREIGN KEY ("checklist_item_id") REFERENCES "checklist_items" ("id") ON DELETE CASCADE,
@@ -123,11 +125,11 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "grc_audits" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "project_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "project_id" ${uuidType} NOT NULL,
           "type" varchar NOT NULL,
           "status" varchar NOT NULL,
-          "lead_auditor_user_id" varchar(36),
+          "lead_auditor_user_id" ${uuidType},
           "scope" text,
           "planned_start" datetime,
           "planned_end" datetime,
@@ -140,11 +142,11 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "audit_findings" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "audit_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "audit_id" ${uuidType} NOT NULL,
           "severity" varchar NOT NULL,
           "status" varchar NOT NULL,
-          "checklist_item_id" varchar(36),
+          "checklist_item_id" ${uuidType},
           "title" varchar NOT NULL,
           "description" text,
           "remediation_plan" text,
@@ -158,12 +160,12 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "audit_evidence_requests" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "audit_id" varchar(36) NOT NULL,
-          "assignee_user_id" varchar(36),
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "audit_id" ${uuidType} NOT NULL,
+          "assignee_user_id" ${uuidType},
           "status" varchar NOT NULL,
           "notes" text,
-          "evidence_item_id" varchar(36),
+          "evidence_item_id" ${uuidType},
           "created_at" datetime NOT NULL DEFAULT (datetime('now')),
           "updated_at" datetime NOT NULL DEFAULT (datetime('now')),
           CONSTRAINT "FK_aer_audit" FOREIGN KEY ("audit_id") REFERENCES "grc_audits" ("id") ON DELETE CASCADE,
@@ -174,8 +176,8 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "report_templates" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "project_id" varchar(36),
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "project_id" ${uuidType},
           "type" varchar NOT NULL,
           "name" varchar NOT NULL,
           "config" text,
@@ -187,8 +189,8 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "vendors" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "project_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "project_id" ${uuidType} NOT NULL,
           "name" varchar NOT NULL,
           "criticality" varchar,
           "status" varchar NOT NULL,
@@ -200,8 +202,8 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "vendor_assessments" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "vendor_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "vendor_id" ${uuidType} NOT NULL,
           "risk_score" float,
           "questionnaire" text,
           "findings" text,
@@ -212,9 +214,9 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "vendor_control_mappings" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "vendor_id" varchar(36) NOT NULL,
-          "internal_control_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "vendor_id" ${uuidType} NOT NULL,
+          "internal_control_id" ${catalogUuidType} NOT NULL,
           CONSTRAINT "FK_vcm_vendor" FOREIGN KEY ("vendor_id") REFERENCES "vendors" ("id") ON DELETE CASCADE,
           CONSTRAINT "FK_vcm_ic" FOREIGN KEY ("internal_control_id") REFERENCES "internal_controls" ("id") ON DELETE CASCADE
         )
@@ -222,15 +224,15 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "incidents" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "project_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "project_id" ${uuidType} NOT NULL,
           "severity" varchar NOT NULL,
           "status" varchar NOT NULL,
           "title" varchar NOT NULL,
           "description" text,
           "impact_assessment" text,
           "root_cause" text,
-          "owner_user_id" varchar(36),
+          "owner_user_id" ${uuidType},
           "created_at" datetime NOT NULL DEFAULT (datetime('now')),
           "updated_at" datetime NOT NULL DEFAULT (datetime('now')),
           CONSTRAINT "FK_inc_project" FOREIGN KEY ("project_id") REFERENCES "projects" ("id") ON DELETE CASCADE,
@@ -240,9 +242,9 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "incident_control_impacts" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "incident_id" varchar(36) NOT NULL,
-          "checklist_item_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "incident_id" ${uuidType} NOT NULL,
+          "checklist_item_id" ${uuidType} NOT NULL,
           "notes" text,
           CONSTRAINT "FK_ici_inc" FOREIGN KEY ("incident_id") REFERENCES "incidents" ("id") ON DELETE CASCADE,
           CONSTRAINT "FK_ici_ci" FOREIGN KEY ("checklist_item_id") REFERENCES "checklist_items" ("id") ON DELETE CASCADE
@@ -251,8 +253,8 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "pipeline_checks" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "project_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "project_id" ${uuidType} NOT NULL,
           "status" varchar NOT NULL,
           "detail" text,
           "external_ref" varchar,
@@ -263,8 +265,8 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "assets" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "project_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "project_id" ${uuidType} NOT NULL,
           "name" varchar NOT NULL,
           "type" varchar,
           "environment" varchar,
@@ -278,9 +280,9 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "asset_control_mappings" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "asset_id" varchar(36) NOT NULL,
-          "internal_control_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "asset_id" ${uuidType} NOT NULL,
+          "internal_control_id" ${catalogUuidType} NOT NULL,
           CONSTRAINT "FK_acm_asset" FOREIGN KEY ("asset_id") REFERENCES "assets" ("id") ON DELETE CASCADE,
           CONSTRAINT "FK_acm_ic" FOREIGN KEY ("internal_control_id") REFERENCES "internal_controls" ("id") ON DELETE CASCADE
         )
@@ -290,7 +292,7 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
         `ALTER TABLE "evidence_items" ADD COLUMN "expires_at" datetime`,
       );
       await queryRunner.query(
-        `ALTER TABLE "evidence_items" ADD COLUMN "superseded_by_id" varchar(36)`,
+        `ALTER TABLE "evidence_items" ADD COLUMN "superseded_by_id" ${uuidType}`,
       );
       await queryRunner.query(
         `ALTER TABLE "integration_connector_instances" ADD COLUMN "recollection_enabled" boolean NOT NULL DEFAULT 0`,
@@ -302,7 +304,7 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
         `ALTER TABLE "comments" ADD COLUMN "resolved_at" datetime`,
       );
       await queryRunner.query(
-        `ALTER TABLE "comments" ADD COLUMN "resolved_by_user_id" varchar(36)`,
+        `ALTER TABLE "comments" ADD COLUMN "resolved_by_user_id" ${uuidType}`,
       );
       await queryRunner.query(
         `ALTER TABLE "comments" ADD COLUMN "mentions" text`,
@@ -313,14 +315,14 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
     } else {
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "policies" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "project_id" varchar(36),
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "project_id" ${uuidType},
           "title" varchar NOT NULL,
           "version" varchar NOT NULL DEFAULT '1.0.0',
           "status" varchar NOT NULL,
           "category" varchar,
-          "owner_user_id" varchar(36),
-          "approver_user_id" varchar(36),
+          "owner_user_id" ${uuidType},
+          "approver_user_id" ${uuidType},
           "content" text NOT NULL,
           "effective_date" TIMESTAMPTZ,
           "next_review_date" TIMESTAMPTZ,
@@ -337,12 +339,12 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "policy_versions" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "policy_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "policy_id" ${uuidType} NOT NULL,
           "version_number" varchar NOT NULL,
           "content" text NOT NULL,
           "change_description" text,
-          "author_user_id" varchar(36),
+          "author_user_id" ${uuidType},
           "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
           CONSTRAINT "FK_pv_policy" FOREIGN KEY ("policy_id") REFERENCES "policies" ("id") ON DELETE CASCADE,
           CONSTRAINT "FK_pv_author" FOREIGN KEY ("author_user_id") REFERENCES "users" ("id") ON DELETE SET NULL
@@ -354,10 +356,10 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "policy_control_mappings" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "policy_id" varchar(36) NOT NULL,
-          "catalog_requirement_id" varchar(36),
-          "internal_control_id" varchar(36),
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "policy_id" ${uuidType} NOT NULL,
+          "catalog_requirement_id" ${catalogUuidType},
+          "internal_control_id" ${catalogUuidType},
           CONSTRAINT "FK_pcm_policy" FOREIGN KEY ("policy_id") REFERENCES "policies" ("id") ON DELETE CASCADE,
           CONSTRAINT "FK_pcm_cat" FOREIGN KEY ("catalog_requirement_id") REFERENCES "catalog_requirements" ("id") ON DELETE SET NULL,
           CONSTRAINT "FK_pcm_ic" FOREIGN KEY ("internal_control_id") REFERENCES "internal_controls" ("id") ON DELETE SET NULL
@@ -366,10 +368,10 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "policy_attestations" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "policy_id" varchar(36) NOT NULL,
-          "policy_version_id" varchar(36),
-          "user_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "policy_id" ${uuidType} NOT NULL,
+          "policy_version_id" ${uuidType},
+          "user_id" ${uuidType} NOT NULL,
           "attested_at" TIMESTAMPTZ,
           "expires_at" TIMESTAMPTZ,
           "status" varchar NOT NULL,
@@ -385,8 +387,8 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "compliance_snapshots" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "project_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "project_id" ${uuidType} NOT NULL,
           "captured_at" TIMESTAMPTZ NOT NULL,
           "total_controls" integer NOT NULL,
           "compliant" integer NOT NULL,
@@ -406,14 +408,14 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "control_test_results" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "project_id" varchar(36) NOT NULL,
-          "checklist_item_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "project_id" ${uuidType} NOT NULL,
+          "checklist_item_id" ${uuidType} NOT NULL,
           "test_type" varchar NOT NULL,
           "result" varchar NOT NULL,
           "tested_at" TIMESTAMPTZ,
           "next_test_date" TIMESTAMPTZ,
-          "connector_run_id" varchar(36),
+          "connector_run_id" ${uuidType},
           "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
           CONSTRAINT "FK_ctr_project" FOREIGN KEY ("project_id") REFERENCES "projects" ("id") ON DELETE CASCADE,
           CONSTRAINT "FK_ctr_ci" FOREIGN KEY ("checklist_item_id") REFERENCES "checklist_items" ("id") ON DELETE CASCADE,
@@ -426,11 +428,11 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "grc_audits" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "project_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "project_id" ${uuidType} NOT NULL,
           "type" varchar NOT NULL,
           "status" varchar NOT NULL,
-          "lead_auditor_user_id" varchar(36),
+          "lead_auditor_user_id" ${uuidType},
           "scope" text,
           "planned_start" TIMESTAMPTZ,
           "planned_end" TIMESTAMPTZ,
@@ -443,11 +445,11 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "audit_findings" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "audit_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "audit_id" ${uuidType} NOT NULL,
           "severity" varchar NOT NULL,
           "status" varchar NOT NULL,
-          "checklist_item_id" varchar(36),
+          "checklist_item_id" ${uuidType},
           "title" varchar NOT NULL,
           "description" text,
           "remediation_plan" text,
@@ -461,12 +463,12 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "audit_evidence_requests" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "audit_id" varchar(36) NOT NULL,
-          "assignee_user_id" varchar(36),
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "audit_id" ${uuidType} NOT NULL,
+          "assignee_user_id" ${uuidType},
           "status" varchar NOT NULL,
           "notes" text,
-          "evidence_item_id" varchar(36),
+          "evidence_item_id" ${uuidType},
           "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
           "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
           CONSTRAINT "FK_aer_audit" FOREIGN KEY ("audit_id") REFERENCES "grc_audits" ("id") ON DELETE CASCADE,
@@ -477,8 +479,8 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "report_templates" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "project_id" varchar(36),
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "project_id" ${uuidType},
           "type" varchar NOT NULL,
           "name" varchar NOT NULL,
           "config" jsonb,
@@ -490,8 +492,8 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "vendors" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "project_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "project_id" ${uuidType} NOT NULL,
           "name" varchar NOT NULL,
           "criticality" varchar,
           "status" varchar NOT NULL,
@@ -503,8 +505,8 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "vendor_assessments" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "vendor_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "vendor_id" ${uuidType} NOT NULL,
           "risk_score" double precision,
           "questionnaire" jsonb,
           "findings" text,
@@ -515,9 +517,9 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "vendor_control_mappings" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "vendor_id" varchar(36) NOT NULL,
-          "internal_control_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "vendor_id" ${uuidType} NOT NULL,
+          "internal_control_id" ${catalogUuidType} NOT NULL,
           CONSTRAINT "FK_vcm_vendor" FOREIGN KEY ("vendor_id") REFERENCES "vendors" ("id") ON DELETE CASCADE,
           CONSTRAINT "FK_vcm_ic" FOREIGN KEY ("internal_control_id") REFERENCES "internal_controls" ("id") ON DELETE CASCADE
         )
@@ -525,15 +527,15 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "incidents" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "project_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "project_id" ${uuidType} NOT NULL,
           "severity" varchar NOT NULL,
           "status" varchar NOT NULL,
           "title" varchar NOT NULL,
           "description" text,
           "impact_assessment" text,
           "root_cause" text,
-          "owner_user_id" varchar(36),
+          "owner_user_id" ${uuidType},
           "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
           "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
           CONSTRAINT "FK_inc_project" FOREIGN KEY ("project_id") REFERENCES "projects" ("id") ON DELETE CASCADE,
@@ -543,9 +545,9 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "incident_control_impacts" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "incident_id" varchar(36) NOT NULL,
-          "checklist_item_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "incident_id" ${uuidType} NOT NULL,
+          "checklist_item_id" ${uuidType} NOT NULL,
           "notes" text,
           CONSTRAINT "FK_ici_inc" FOREIGN KEY ("incident_id") REFERENCES "incidents" ("id") ON DELETE CASCADE,
           CONSTRAINT "FK_ici_ci" FOREIGN KEY ("checklist_item_id") REFERENCES "checklist_items" ("id") ON DELETE CASCADE
@@ -554,8 +556,8 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "pipeline_checks" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "project_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "project_id" ${uuidType} NOT NULL,
           "status" varchar NOT NULL,
           "detail" text,
           "external_ref" varchar,
@@ -566,8 +568,8 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "assets" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "project_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "project_id" ${uuidType} NOT NULL,
           "name" varchar NOT NULL,
           "type" varchar,
           "environment" varchar,
@@ -581,9 +583,9 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
 
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "asset_control_mappings" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "asset_id" varchar(36) NOT NULL,
-          "internal_control_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "asset_id" ${uuidType} NOT NULL,
+          "internal_control_id" ${catalogUuidType} NOT NULL,
           CONSTRAINT "FK_acm_asset" FOREIGN KEY ("asset_id") REFERENCES "assets" ("id") ON DELETE CASCADE,
           CONSTRAINT "FK_acm_ic" FOREIGN KEY ("internal_control_id") REFERENCES "internal_controls" ("id") ON DELETE CASCADE
         )
@@ -593,7 +595,7 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
         `ALTER TABLE "evidence_items" ADD COLUMN IF NOT EXISTS "expires_at" TIMESTAMPTZ`,
       );
       await queryRunner.query(
-        `ALTER TABLE "evidence_items" ADD COLUMN IF NOT EXISTS "superseded_by_id" varchar(36)`,
+        `ALTER TABLE "evidence_items" ADD COLUMN IF NOT EXISTS "superseded_by_id" ${uuidType}`,
       );
       await queryRunner.query(
         `ALTER TABLE "integration_connector_instances" ADD COLUMN IF NOT EXISTS "recollection_enabled" boolean NOT NULL DEFAULT false`,
@@ -605,7 +607,7 @@ export class GrcPlatformExpansion1700000006000 implements MigrationInterface {
         `ALTER TABLE "comments" ADD COLUMN IF NOT EXISTS "resolved_at" TIMESTAMPTZ`,
       );
       await queryRunner.query(
-        `ALTER TABLE "comments" ADD COLUMN IF NOT EXISTS "resolved_by_user_id" varchar(36)`,
+        `ALTER TABLE "comments" ADD COLUMN IF NOT EXISTS "resolved_by_user_id" ${uuidType}`,
       );
       await queryRunner.query(
         `ALTER TABLE "comments" ADD COLUMN IF NOT EXISTS "mentions" jsonb`,

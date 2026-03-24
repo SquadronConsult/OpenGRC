@@ -3,7 +3,7 @@
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useState, Suspense } from 'react';
 import { AlertCircle } from 'lucide-react';
-import { api, getApiBase, setAuthToken } from '@/lib/api';
+import { api, setAuthToken } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,38 +17,38 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 
-function LoginForm() {
+function ChangePasswordForm() {
   const sp = useSearchParams();
   const router = useRouter();
   const next = sp.get('next') || '/projects';
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const [err, setErr] = useState('');
   const [pending, setPending] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr('');
+    if (newPassword !== confirm) {
+      setErr('New password and confirmation do not match');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setErr('New password must be at least 8 characters');
+      return;
+    }
     setPending(true);
     try {
-      const r = await api<{ token: string; user?: { mustChangePassword?: boolean } }>(
-        '/auth/login',
-        {
-          method: 'POST',
-          body: JSON.stringify({ email, password }),
-          skipAuthRedirect: true,
-        },
-      );
+      const r = await api<{ token: string }>('/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword, newPassword }),
+        skipAuthRedirect: true,
+      });
       setAuthToken(r.token);
-      const dest =
-        r.user?.mustChangePassword === true
-          ? `/change-password?next=${encodeURIComponent(next.startsWith('/') ? next : '/projects')}`
-          : next.startsWith('/')
-            ? next
-            : '/projects';
-      router.replace(dest);
+      router.replace(next.startsWith('/') ? next : '/projects');
     } catch (ex: unknown) {
-      setErr(ex instanceof Error ? ex.message : 'Login failed');
+      setErr(ex instanceof Error ? ex.message : 'Could not update password');
     } finally {
       setPending(false);
     }
@@ -58,35 +58,46 @@ function LoginForm() {
     <div className="animate-in fade-in duration-300 flex min-h-[calc(100vh-6rem)] items-center justify-center px-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <CardTitle className="text-xl">Sign in</CardTitle>
+          <CardTitle className="text-xl">Choose a new password</CardTitle>
           <CardDescription>
-            {getApiBase().startsWith('/api')
-              ? 'Session cookie + token stored for this browser.'
-              : `Using API at ${getApiBase()}`}
+            Replace the initial password from your environment with one only you know.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="grid gap-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="current">Current password</Label>
               <Input
-                id="email"
-                type="email"
-                autoComplete="username"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="current"
+                type="password"
+                autoComplete="current-password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="new">New password</Label>
               <Input
-                id="password"
+                id="new"
                 type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
                 required
+                minLength={8}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm">Confirm new password</Label>
+              <Input
+                id="confirm"
+                type="password"
+                autoComplete="new-password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                required
+                minLength={8}
               />
             </div>
 
@@ -98,17 +109,16 @@ function LoginForm() {
             )}
 
             <Button type="submit" className="w-full" disabled={pending}>
-              {pending ? 'Signing in…' : 'Sign in'}
+              {pending ? 'Saving…' : 'Save password'}
             </Button>
           </form>
-
         </CardContent>
       </Card>
     </div>
   );
 }
 
-export default function LoginPage() {
+export default function ChangePasswordPage() {
   return (
     <Suspense
       fallback={
@@ -127,7 +137,7 @@ export default function LoginPage() {
         </div>
       }
     >
-      <LoginForm />
+      <ChangePasswordForm />
     </Suspense>
   );
 }

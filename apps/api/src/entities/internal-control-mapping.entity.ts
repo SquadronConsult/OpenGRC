@@ -8,14 +8,14 @@ export class InternalControlMapping {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'internal_control_id' })
+  @Column({ name: 'internal_control_id', type: 'uuid' })
   internalControlId: string;
 
   @ManyToOne(() => InternalControl, (ic) => ic.mappings, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'internal_control_id' })
   internalControl: InternalControl;
 
-  @Column({ name: 'catalog_requirement_id' })
+  @Column({ name: 'catalog_requirement_id', type: 'uuid' })
   catalogRequirementId: string;
 
   @ManyToOne(() => CatalogRequirement, { onDelete: 'CASCADE' })

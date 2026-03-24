@@ -6,13 +6,7 @@ import { LogOut } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { logout } from '@/lib/api';
 import { Button } from '@/components/ui/button';
-
-function isPublicPath(pathname: string): boolean {
-  if (pathname === '/') return true;
-  if (pathname.startsWith('/login')) return true;
-  if (pathname.startsWith('/bootstrap')) return true;
-  return false;
-}
+import { isPublicPath } from '@/lib/auth-utils';
 
 export function UserMenu() {
   const pathname = usePathname();

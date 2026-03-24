@@ -477,7 +477,7 @@ export default function AutoScopePage({ params }: { params: { id: string } }) {
                 <Label htmlFor="inventoryMode">Cloud Inventory Mode</Label>
                 <select
                   id="inventoryMode"
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground"
                   value={inventoryMode}
                   onChange={(e) => setInventoryMode(e.target.value as 'metadata' | 'live')}
                 >
@@ -896,7 +896,7 @@ export default function AutoScopePage({ params }: { params: { id: string } }) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             aria-label="Filter by status"
@@ -908,7 +908,7 @@ export default function AutoScopePage({ params }: { params: { id: string } }) {
             <option value="stale">Stale</option>
           </select>
           <select
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
             value={decisionFilter}
             onChange={(e) => setDecisionFilter(e.target.value)}
             aria-label="Filter by decision"

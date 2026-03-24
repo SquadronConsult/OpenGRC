@@ -6,6 +6,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { datetimeColumnType } from '../db/column-types';
 import { IntegrationConnectorInstance } from './integration-connector-instance.entity';
 
 @Entity('integration_connector_runs')
@@ -13,7 +14,7 @@ export class IntegrationConnectorRun {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'instance_id' })
+  @Column({ name: 'instance_id', type: 'uuid' })
   instanceId: string;
 
   @ManyToOne(() => IntegrationConnectorInstance, (i) => i.runs, { onDelete: 'CASCADE' })
@@ -23,10 +24,10 @@ export class IntegrationConnectorRun {
   @Column({ type: 'varchar', default: 'running' })
   status: 'running' | 'success' | 'failed';
 
-  @Column({ name: 'started_at', type: 'datetime' })
+  @Column({ name: 'started_at', type: datetimeColumnType })
   startedAt: Date;
 
-  @Column({ name: 'finished_at', type: 'datetime', nullable: true })
+  @Column({ name: 'finished_at', type: datetimeColumnType, nullable: true })
   finishedAt: Date | null;
 
   @Column({ name: 'items_accepted', type: 'int', default: 0 })

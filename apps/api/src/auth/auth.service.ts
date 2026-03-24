@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -9,11 +10,14 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../entities/user.entity';
 import { JwtAccessPayload } from './auth.types';
+import { LEGACY_DISABLED_PASSWORD_PLACEHOLDER } from './auth.constants';
 
 const BCRYPT_ROUNDS = 12;
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectRepository(User) private readonly users: Repository<User>,
     private readonly jwt: JwtService,
@@ -58,12 +62,21 @@ export class AuthService {
     };
   }
 
-  /** Creates first admin only when DB is empty and SEED_ADMIN_PASSWORD is set (dev convenience). */
+  /**
+   * When the database has no users, creates the initial admin from
+   * `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` (≥8 chars).
+   * The user must change this password on first login (`mustChangePassword`).
+   */
   async ensureSeedAdmin() {
     const count = await this.users.count();
     if (count > 0) return;
     const pwd = process.env.SEED_ADMIN_PASSWORD;
     if (!pwd || pwd.length < 8) {
+      if (pwd != null && pwd.length > 0 && pwd.length < 8) {
+        this.logger.warn(
+          'SEED_ADMIN_PASSWORD is set but must be at least 8 characters; skipping initial admin seed.',
+        );
+      }
       return;
     }
     const email = (process.env.SEED_ADMIN_EMAIL || 'admin@localhost').toLowerCase();
@@ -71,11 +84,12 @@ export class AuthService {
     const user = this.users.create({
       email,
       passwordHash: hash,
-      name: 'Seed Admin',
+      name: 'Administrator',
       role: 'admin',
       isActive: true,
       passwordSetAt: new Date(),
       authProvider: 'local',
+      mustChangePassword: true,
     });
     await this.users.save(user);
   }
@@ -104,10 +118,15 @@ export class AuthService {
 
   async validateUser(
     userId: string,
-  ): Promise<{ userId: string; email: string; role: string } | null> {
+  ): Promise<{ userId: string; email: string; role: string; mustChangePassword: boolean } | null> {
     const user = await this.users.findOne({ where: { id: userId } });
     if (!user || !user.isActive) return null;
-    return { userId: user.id, email: user.email, role: user.role };
+    return {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      mustChangePassword: user.mustChangePassword,
+    };
   }
 
   /**
@@ -140,8 +159,8 @@ export class AuthService {
     if (!ok) {
       throw new UnauthorizedException('Invalid credentials');
     }
-    if (user.passwordHash === 'single-user-local-auth-disabled') {
-      throw new UnauthorizedException('Set a real password or reset bootstrap');
+    if (user.passwordHash === LEGACY_DISABLED_PASSWORD_PLACEHOLDER) {
+      throw new UnauthorizedException('Set a real password for this account');
     }
     user.lastLoginAt = new Date();
     await this.users.save(user);
@@ -153,41 +172,29 @@ export class AuthService {
         email: user.email,
         name: user.name,
         role: user.role,
+        mustChangePassword: user.mustChangePassword,
       },
     };
   }
 
-  async bootstrapFirstAdmin(
-    email: string,
-    password: string,
-    name: string | undefined,
-    bootstrapToken: string,
-  ) {
-    const expected = process.env.BOOTSTRAP_TOKEN;
-    if (!expected?.length) {
-      throw new BadRequestException('Bootstrap is disabled (set BOOTSTRAP_TOKEN)');
-    }
-    if (bootstrapToken !== expected) {
-      throw new UnauthorizedException('Invalid bootstrap token');
-    }
-    const count = await this.users.count();
-    if (count > 0) {
-      throw new BadRequestException('Bootstrap already completed');
-    }
-    if (password.length < 8) {
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    if (newPassword.length < 8) {
       throw new BadRequestException('Password must be at least 8 characters');
     }
-    const normalized = email.trim().toLowerCase();
-    const hash = await this.hashPassword(password);
-    const user = this.users.create({
-      email: normalized,
-      passwordHash: hash,
-      name: name ?? 'Administrator',
-      role: 'admin',
-      isActive: true,
-      passwordSetAt: new Date(),
-      authProvider: 'local',
-    });
+    const user = await this.users.findOne({ where: { id: userId } });
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException();
+    }
+    if (user.authProvider && user.authProvider !== 'local') {
+      throw new BadRequestException('Password change is not available for this account');
+    }
+    const ok = await this.verifyPassword(currentPassword, user.passwordHash);
+    if (!ok) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+    user.passwordHash = await this.hashPassword(newPassword);
+    user.passwordSetAt = new Date();
+    user.mustChangePassword = false;
     await this.users.save(user);
     const token = this.signAccessToken(user);
     return {
@@ -197,6 +204,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         role: user.role,
+        mustChangePassword: false,
       },
     };
   }
@@ -213,6 +221,7 @@ export class AuthService {
       role: user.role,
       authProvider: user.authProvider,
       lastLoginAt: user.lastLoginAt,
+      mustChangePassword: user.mustChangePassword,
     };
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "open-grc-fedramp",
+  "name": "open-grc",
   "private": true,
   "scripts": {
     "dev:api": "cd apps/api && npm run start:dev",

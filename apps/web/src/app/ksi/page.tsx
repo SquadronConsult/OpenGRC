@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Search, ShieldCheck } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Input } from '@/components/ui/input';
@@ -28,7 +29,10 @@ export default function KsiPage() {
     const q = domain ? `&domain=${encodeURIComponent(domain)}` : '';
     api<{ items: K[] }>(`/frmr/ksi?limit=150${q}`)
       .then((d) => setItems(d.items))
-      .catch(() => setItems([]))
+      .catch((e: unknown) => {
+        toast.error(e instanceof Error ? e.message : 'Failed to load KSIs');
+        setItems([]);
+      })
       .finally(() => setLoading(false));
   }, [domain]);
 

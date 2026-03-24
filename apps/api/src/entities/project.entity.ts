@@ -7,6 +7,7 @@ import {
   JoinColumn,
   OneToMany,
 } from 'typeorm';
+import { datetimeColumnType } from '../db/column-types';
 import { User } from './user.entity';
 import { ProjectMember } from './project-member.entity';
 import { ChecklistItem } from './checklist-item.entity';
@@ -32,13 +33,13 @@ export class Project {
   @Column({ name: 'compliance_start_date', type: 'date', nullable: true })
   complianceStartDate: Date | null;
 
-  @Column({ name: 'frmr_version_id', nullable: true })
+  @Column({ name: 'frmr_version_id', type: 'uuid', nullable: true })
   frmrVersionId: string;
 
   @Column({ name: 'auto_scope_config', type: 'simple-json', nullable: true })
   autoScopeConfig: Record<string, unknown> | null;
 
-  @Column({ name: 'auto_scope_last_run_at', type: 'datetime', nullable: true })
+  @Column({ name: 'auto_scope_last_run_at', type: datetimeColumnType, nullable: true })
   autoScopeLastRunAt: Date | null;
 
   @Column({ name: 'owner_id', nullable: true })

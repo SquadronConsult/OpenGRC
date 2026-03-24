@@ -5,11 +5,15 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
+import { datetimeColumnType } from '../db/column-types';
+import { EvidenceReviewState } from './enums/grc-enums';
 import { ChecklistItem } from './checklist-item.entity';
 import { User } from './user.entity';
 
 @Entity('evidence_items')
+@Index(['checklistItemId'])
 export class EvidenceItem {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -40,8 +44,14 @@ export class EvidenceItem {
   metadata: Record<string, unknown> | null;
 
   /** draft | ready_for_review | accepted | rejected | expired */
-  @Column({ name: 'review_state', type: 'varchar', nullable: true })
-  reviewState: string | null;
+  @Column({
+    name: 'review_state',
+    type: 'varchar',
+    length: 32,
+    nullable: true,
+    enum: EvidenceReviewState,
+  })
+  reviewState: EvidenceReviewState | null;
 
   @Column({ name: 'artifact_type', type: 'varchar', nullable: true })
   artifactType: string | null;
@@ -49,10 +59,10 @@ export class EvidenceItem {
   @Column({ name: 'source_system', type: 'varchar', nullable: true })
   sourceSystem: string | null;
 
-  @Column({ name: 'collection_start', type: 'datetime', nullable: true })
+  @Column({ name: 'collection_start', type: datetimeColumnType, nullable: true })
   collectionStart: Date | null;
 
-  @Column({ name: 'collection_end', type: 'datetime', nullable: true })
+  @Column({ name: 'collection_end', type: datetimeColumnType, nullable: true })
   collectionEnd: Date | null;
 
   @Column({ name: 'uploaded_by_id', type: 'varchar', nullable: true })
@@ -62,7 +72,7 @@ export class EvidenceItem {
   @JoinColumn({ name: 'uploaded_by_id' })
   uploadedBy: User;
 
-  @Column({ name: 'expires_at', type: 'datetime', nullable: true })
+  @Column({ name: 'expires_at', type: datetimeColumnType, nullable: true })
   expiresAt: Date | null;
 
   @Column({ name: 'superseded_by_id', type: 'varchar', nullable: true })

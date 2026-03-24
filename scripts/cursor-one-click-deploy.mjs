@@ -13,8 +13,9 @@ import {
 const WORKSPACE_CURSOR_DIR = path.join(ROOT, '.cursor');
 const WORKSPACE_MCP_CONFIG_PATH = path.join(WORKSPACE_CURSOR_DIR, 'mcp.json');
 const GLOBAL_MCP_CONFIG_PATH = path.join(USER_CURSOR_DIR, 'mcp.json');
-const API_URL = process.env.API_URL || 'http://localhost:3000';
-const WEB_URL = process.env.WEB_URL || 'http://localhost:3001';
+/** API base URL for health checks (Docker all-in-one: use /api prefix on port 8080). */
+const API_URL = process.env.API_URL || 'http://localhost:8080/api';
+const WEB_URL = process.env.WEB_URL || 'http://localhost:8080';
 const HEALTH_PATH = '/health';
 const IS_WINDOWS = process.platform === 'win32';
 
@@ -77,8 +78,8 @@ async function writeCursorMcpConfig(configPath, mode = 'global') {
 }
 
 async function main() {
-  console.log('\n[1/4] Building and starting Docker services (api/web/mcp)...');
-  await run('docker', ['compose', 'up', '-d', '--build', 'api', 'web', 'mcp'], {
+  console.log('\n[1/4] Building and starting Docker (all-in-one: opengrc)...');
+  await run('docker', ['compose', 'up', '-d', '--build', 'opengrc'], {
     cwd: ROOT,
   });
 
@@ -86,7 +87,7 @@ async function main() {
   const ok = await waitForHealth(`${API_URL}${HEALTH_PATH}`);
   if (!ok) {
     throw new Error(
-      `API did not become healthy at ${API_URL}${HEALTH_PATH}. Check: docker compose logs api`,
+      `API did not become healthy at ${API_URL}${HEALTH_PATH}. Check: docker compose logs opengrc`,
     );
   }
 

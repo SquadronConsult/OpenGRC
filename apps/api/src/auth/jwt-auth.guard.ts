@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -8,7 +9,17 @@ import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
+import { RequestUser } from './auth.types';
 import { AUTH_COOKIE_NAME, IS_PUBLIC_KEY } from './auth.constants';
+
+/** Routes still allowed while `mustChangePassword` is true (password rotation flow). */
+function isAllowedWhenMustChangePassword(method: string, path: string): boolean {
+  const p = path.split('?')[0];
+  if (method === 'POST' && p === '/auth/logout') return true;
+  if (method === 'POST' && p === '/auth/change-password') return true;
+  if (method === 'GET' && p === '/auth/me') return true;
+  return false;
+}
 
 function extractBearer(req: Request): string | undefined {
   const auth = req.headers.authorization;
@@ -45,7 +56,7 @@ export class JwtAuthGuard implements CanActivate {
     if (isPublic) return true;
 
     const req = context.switchToHttp().getRequest<
-      Request & { user?: { userId: string; email: string; role: string } }
+      Request & { user?: RequestUser }
     >();
     const token = extractBearer(req) || extractCookie(req);
     if (!token) {
@@ -59,7 +70,7 @@ export class JwtAuthGuard implements CanActivate {
           'Integration key configured but no admin user exists',
         );
       }
-      req.user = actor;
+      req.user = { ...actor, mustChangePassword: false };
       return true;
     }
     let payload: { sub: string };
@@ -73,6 +84,16 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('User not found or inactive');
     }
     req.user = user;
+    const raw = context.switchToHttp().getRequest<Request>();
+    const path = raw.path || raw.url?.split('?')[0] || '';
+    if (
+      user.mustChangePassword &&
+      !isAllowedWhenMustChangePassword(raw.method || 'GET', path)
+    ) {
+      throw new ForbiddenException(
+        'You must change your password before using the API',
+      );
+    }
     return true;
   }
 }

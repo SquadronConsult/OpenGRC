@@ -10,10 +10,11 @@ export class GenericCatalog1700000003000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     const driver = queryRunner.connection.options.type;
     const jsonType = driver === 'sqlite' ? 'text' : 'jsonb';
+    const uuidType = driver === 'sqlite' ? 'varchar(36)' : 'uuid';
 
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS "frameworks" (
-        "id" varchar(36) PRIMARY KEY NOT NULL,
+        "id" ${uuidType} PRIMARY KEY NOT NULL,
         "code" varchar NOT NULL,
         "name" varchar NOT NULL,
         "description" text
@@ -25,12 +26,12 @@ export class GenericCatalog1700000003000 implements MigrationInterface {
 
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS "framework_releases" (
-        "id" varchar(36) PRIMARY KEY NOT NULL,
-        "framework_id" varchar(36) NOT NULL,
+        "id" ${uuidType} PRIMARY KEY NOT NULL,
+        "framework_id" ${uuidType} NOT NULL,
         "release_code" varchar NOT NULL,
         "label" varchar,
         "metadata" ${jsonType},
-        "frmr_version_id" varchar(36),
+        "frmr_version_id" ${uuidType},
         CONSTRAINT "FK_framework_releases_framework" FOREIGN KEY ("framework_id") REFERENCES "frameworks" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
         CONSTRAINT "FK_framework_releases_frmr_version" FOREIGN KEY ("frmr_version_id") REFERENCES "frmr_versions" ("id") ON DELETE SET NULL ON UPDATE NO ACTION
       )
@@ -41,12 +42,12 @@ export class GenericCatalog1700000003000 implements MigrationInterface {
 
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS "catalog_controls" (
-        "id" varchar(36) PRIMARY KEY NOT NULL,
-        "framework_release_id" varchar(36) NOT NULL,
+        "id" ${uuidType} PRIMARY KEY NOT NULL,
+        "framework_release_id" ${uuidType} NOT NULL,
         "control_code" varchar NOT NULL,
         "title" varchar,
         "description" text,
-        "parent_id" varchar(36),
+        "parent_id" ${uuidType},
         "metadata" ${jsonType},
         CONSTRAINT "FK_catalog_controls_release" FOREIGN KEY ("framework_release_id") REFERENCES "framework_releases" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
       )
@@ -57,14 +58,14 @@ export class GenericCatalog1700000003000 implements MigrationInterface {
 
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS "catalog_requirements" (
-        "id" varchar(36) PRIMARY KEY NOT NULL,
-        "framework_release_id" varchar(36) NOT NULL,
-        "catalog_control_id" varchar(36),
+        "id" ${uuidType} PRIMARY KEY NOT NULL,
+        "framework_release_id" ${uuidType} NOT NULL,
+        "catalog_control_id" ${uuidType},
         "requirement_code" varchar NOT NULL,
         "statement" text NOT NULL,
         "kind" varchar NOT NULL DEFAULT 'generic',
-        "source_frr_id" varchar(36),
-        "source_ksi_id" varchar(36),
+        "source_frr_id" ${uuidType},
+        "source_ksi_id" ${uuidType},
         "metadata" ${jsonType},
         CONSTRAINT "FK_catalog_requirements_release" FOREIGN KEY ("framework_release_id") REFERENCES "framework_releases" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
         CONSTRAINT "FK_catalog_requirements_control" FOREIGN KEY ("catalog_control_id") REFERENCES "catalog_controls" ("id") ON DELETE SET NULL ON UPDATE NO ACTION
@@ -76,7 +77,7 @@ export class GenericCatalog1700000003000 implements MigrationInterface {
 
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS "internal_controls" (
-        "id" varchar(36) PRIMARY KEY NOT NULL,
+        "id" ${uuidType} PRIMARY KEY NOT NULL,
         "code" varchar NOT NULL,
         "title" varchar NOT NULL,
         "description" text
@@ -88,9 +89,9 @@ export class GenericCatalog1700000003000 implements MigrationInterface {
 
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS "internal_control_mappings" (
-        "id" varchar(36) PRIMARY KEY NOT NULL,
-        "internal_control_id" varchar(36) NOT NULL,
-        "catalog_requirement_id" varchar(36) NOT NULL,
+        "id" ${uuidType} PRIMARY KEY NOT NULL,
+        "internal_control_id" ${uuidType} NOT NULL,
+        "catalog_requirement_id" ${uuidType} NOT NULL,
         "framework_code" varchar,
         "mapping_type" varchar NOT NULL DEFAULT 'full',
         "coverage" float,
@@ -118,11 +119,11 @@ export class GenericCatalog1700000003000 implements MigrationInterface {
     if (!names.has('catalog_requirement_id')) {
       if (driver === 'sqlite') {
         await queryRunner.query(
-          `ALTER TABLE "checklist_items" ADD COLUMN "catalog_requirement_id" varchar(36)`,
+          `ALTER TABLE "checklist_items" ADD COLUMN "catalog_requirement_id" ${uuidType}`,
         );
       } else {
         await queryRunner.query(
-          `ALTER TABLE "checklist_items" ADD COLUMN IF NOT EXISTS "catalog_requirement_id" varchar(36)`,
+          `ALTER TABLE "checklist_items" ADD COLUMN IF NOT EXISTS "catalog_requirement_id" ${uuidType}`,
         );
       }
     }

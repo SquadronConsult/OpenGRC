@@ -5,11 +5,15 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
+import { datetimeColumnType } from '../db/column-types';
 import { User } from './user.entity';
 import { ChecklistItem } from './checklist-item.entity';
 
 @Entity('comments')
+@Index(['checklistItemId'])
+@Index(['userId'])
 export class Comment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -37,7 +41,7 @@ export class Comment {
   @Column({ name: 'parent_id', nullable: true })
   parentId: string;
 
-  @Column({ name: 'resolved_at', type: 'datetime', nullable: true })
+  @Column({ name: 'resolved_at', type: datetimeColumnType, nullable: true })
   resolvedAt: Date | null;
 
   @Column({ name: 'resolved_by_user_id', type: 'varchar', nullable: true })

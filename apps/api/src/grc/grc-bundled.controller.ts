@@ -16,6 +16,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ProjectsService } from '../projects/projects.service';
 import { GrcAudit } from '../entities/grc-audit.entity';
 import { AuditFinding } from '../entities/audit-finding.entity';
+import {
+  AuditFindingSeverity,
+  AuditFindingStatus,
+} from '../entities/enums/grc-enums';
 import { AuditEvidenceRequest } from '../entities/audit-evidence-request.entity';
 import { PoamService } from '../poam/poam.service';
 import { DashboardService } from '../dashboard/dashboard.service';
@@ -108,8 +112,8 @@ export class ProjectAuditsController {
     await this.projects.assertAccess(projectId, req.user.userId, req.user.role);
     const f = this.findings.create({
       auditId,
-      severity: b.severity,
-      status: 'open',
+      severity: b.severity as AuditFindingSeverity,
+      status: AuditFindingStatus.Open,
       checklistItemId: b.checklistItemId ?? null,
       title: b.title,
       description: b.description ?? null,

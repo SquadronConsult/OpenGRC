@@ -1,69 +1,23 @@
-# Local-first minimal stack — docker compose up --build
+# OpenGRC — single container: PostgreSQL + Nest API + Next.js (see root Dockerfile).
+# This is the only supported Docker Compose stack.
+# UI: http://localhost:8080  (Next.js proxies API via /api/* to the embedded API)
 services:
-  api:
+  opengrc:
     build:
-      context: ./apps/api
+      context: .
       dockerfile: Dockerfile
+    ports:
+      - "8080:3001"
     environment:
-      DB_TYPE: sqlite
-      SQLITE_PATH: /app/local-data/grc.sqlite
-      EVIDENCE_DIR: /app/evidence
-      LOCAL_DATA_DIR: /app/local-data
-      DB_SYNC: "true"
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-change-me}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@localhost}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
-      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-dev-local-change-me-in-docker}
-      BOOTSTRAP_TOKEN: ${BOOTSTRAP_TOKEN:-}
-      FRMR_AUTO_INGEST: "true"
-      FRMR_PREFER_LOCAL: "true"
-      FRMR_OFFLINE_PATH: /app/local-data/FRMR.documentation.json
-      INTEGRATION_API_KEY: dev-integration-key
+      INTEGRATION_API_KEY: ${INTEGRATION_API_KEY:-}
+      FRMR_AUTO_INGEST: ${FRMR_AUTO_INGEST:-}
+      FRMR_PREFER_LOCAL: ${FRMR_PREFER_LOCAL:-}
+      FRMR_OFFLINE_PATH: ${FRMR_OFFLINE_PATH:-}
     volumes:
-      - localdata:/app/local-data
-      - evidence:/app/evidence
-      - ./:/workspace
-    ports:
-      - "3000:3000"
-
-  web:
-    build:
-      context: ./apps/web
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: http://localhost:3000
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost:3000
-    ports:
-      - "3001:3001"
-    depends_on:
-      - api
-
-  mcp:
-    container_name: open-grc-mcp
-    build:
-      context: ./apps/mcp-server
-      dockerfile: Dockerfile
-    environment:
-      MCP_WORKSPACE_ROOT: /workspace
-      MCP_ALLOWED_PATHS: /workspace
-      MCP_DATA_DIR: /app/data
-      MCP_HTTP_HOST: 0.0.0.0
-      MCP_HTTP_PORT: "3334"
-      MCP_HTTP_PATH: /mcp
-      OPEN_GRC_API_URL: http://api:3000
-      INTEGRATION_API_KEY: dev-integration-key
-      MCP_DRY_RUN_DEFAULT: "false"
-      MCP_MAX_FILES_PER_RUN: "25"
-      MCP_MAX_STEPS_PER_RUN: "60"
-      MCP_COMMAND_TIMEOUT_MS: "120000"
-    volumes:
-      - ./:/workspace
-      - mcpdata:/app/data
-    working_dir: /app
-    depends_on:
-      - api
+      - pgdata:/var/lib/postgresql/data
 
 volumes:
-  localdata:
-  evidence:
-  mcpdata:
+  pgdata:

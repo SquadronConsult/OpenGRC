@@ -8,6 +8,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { datetimeColumnType } from '../db/column-types';
 import { Project } from './project.entity';
 import { IntegrationConnectorRun } from './integration-connector-run.entity';
 
@@ -16,7 +17,7 @@ export class IntegrationConnectorInstance {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'project_id' })
+  @Column({ name: 'project_id', type: 'uuid' })
   projectId: string;
 
   @ManyToOne(() => Project, { onDelete: 'CASCADE' })
@@ -38,17 +39,17 @@ export class IntegrationConnectorInstance {
   configJson: string;
 
   /** Optional link to an integration_credentials row for rotation tracking; secrets remain in config_json. */
-  @Column({ name: 'linked_credential_id', type: 'varchar', nullable: true })
+  @Column({ name: 'linked_credential_id', type: 'uuid', nullable: true })
   linkedCredentialId: string | null;
 
   /** Opaque cursor/watermark for incremental collection */
   @Column({ name: 'cursor', type: 'text', nullable: true })
   cursor: string | null;
 
-  @Column({ name: 'last_run_at', type: 'datetime', nullable: true })
+  @Column({ name: 'last_run_at', type: datetimeColumnType, nullable: true })
   lastRunAt: Date | null;
 
-  @Column({ name: 'last_success_at', type: 'datetime', nullable: true })
+  @Column({ name: 'last_success_at', type: datetimeColumnType, nullable: true })
   lastSuccessAt: Date | null;
 
   @Column({ name: 'last_error', type: 'text', nullable: true })

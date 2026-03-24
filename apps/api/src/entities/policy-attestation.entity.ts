@@ -6,6 +6,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
+import { datetimeColumnType } from '../db/column-types';
 import { Policy } from './policy.entity';
 import { PolicyVersion } from './policy-version.entity';
 import { User } from './user.entity';
@@ -38,10 +39,10 @@ export class PolicyAttestation {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column({ name: 'attested_at', type: 'datetime', nullable: true })
+  @Column({ name: 'attested_at', type: datetimeColumnType, nullable: true })
   attestedAt: Date | null;
 
-  @Column({ name: 'expires_at', type: 'datetime', nullable: true })
+  @Column({ name: 'expires_at', type: datetimeColumnType, nullable: true })
   expiresAt: Date | null;
 
   @Column({ type: 'varchar' })

@@ -14,7 +14,7 @@ export class CatalogControl {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'framework_release_id' })
+  @Column({ name: 'framework_release_id', type: 'uuid' })
   frameworkReleaseId: string;
 
   @ManyToOne(() => FrameworkRelease, (r) => r.controls, { onDelete: 'CASCADE' })
@@ -25,13 +25,13 @@ export class CatalogControl {
   @Column({ name: 'control_code' })
   controlCode: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   title: string | null;
 
   @Column({ type: 'text', nullable: true })
   description: string | null;
 
-  @Column({ name: 'parent_id', type: 'varchar', nullable: true })
+  @Column({ name: 'parent_id', type: 'uuid', nullable: true })
   parentId: string | null;
 
   @Column({ type: 'simple-json', nullable: true })

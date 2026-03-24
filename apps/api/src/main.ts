@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import * as cookieParser from 'cookie-parser';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -54,7 +54,8 @@ async function bootstrap() {
 
   const port = parseInt(process.env.PORT || '3000', 10);
   await app.listen(port, '0.0.0.0');
-  console.log(`GRC API listening on ${port}`);
-  console.log(`OpenAPI UI: http://0.0.0.0:${port}/docs  spec: /docs-json`);
+  const logger = new Logger('Bootstrap');
+  logger.log(`GRC API listening on ${port}`);
+  logger.log(`OpenAPI UI: http://0.0.0.0:${port}/docs  spec: /docs-json`);
 }
 bootstrap();

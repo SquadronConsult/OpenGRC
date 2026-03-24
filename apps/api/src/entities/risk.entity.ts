@@ -9,6 +9,8 @@ import {
   OneToMany,
   Index,
 } from 'typeorm';
+import { datetimeColumnType } from '../db/column-types';
+import { RiskStatus } from './enums/grc-enums';
 import { Project } from './project.entity';
 import { User } from './user.entity';
 import { RiskChecklistMitigation } from './risk-checklist-mitigation.entity';
@@ -64,10 +66,15 @@ export class Risk {
   residualOverrideReason: string | null;
 
   /** draft | open | treating | accepted | closed */
-  @Column({ type: 'varchar', default: 'open' })
-  status: string;
+  @Column({
+    type: 'varchar',
+    length: 24,
+    enum: RiskStatus,
+    default: RiskStatus.Open,
+  })
+  status: RiskStatus;
 
-  @Column({ name: 'owner_user_id', nullable: true })
+  @Column({ name: 'owner_user_id', type: 'varchar', nullable: true })
   ownerUserId: string | null;
 
   @ManyToOne(() => User, { nullable: true })
@@ -78,7 +85,7 @@ export class Risk {
   @Column({ name: 'appetite_decision', type: 'varchar', nullable: true })
   appetiteDecision: string | null;
 
-  @Column({ name: 'acceptance_expires_at', type: 'datetime', nullable: true })
+  @Column({ name: 'acceptance_expires_at', type: datetimeColumnType, nullable: true })
   acceptanceExpiresAt: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })

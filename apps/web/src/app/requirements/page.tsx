@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Search, FileText } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Input } from '@/components/ui/input';
@@ -42,8 +43,15 @@ export default function RequirementsPage() {
     setLoading(true);
     const q = process ? `&process=${encodeURIComponent(process)}` : '';
     api<{ items: Req[]; total: number }>(`/frmr/requirements?limit=100${q}`)
-      .then((d) => { setItems(d.items); setTotal(d.total ?? d.items.length); })
-      .catch(() => { setItems([]); setTotal(0); })
+      .then((d) => {
+        setItems(d.items);
+        setTotal(d.total ?? d.items.length);
+      })
+      .catch((e: unknown) => {
+        toast.error(e instanceof Error ? e.message : 'Failed to load requirements');
+        setItems([]);
+        setTotal(0);
+      })
       .finally(() => setLoading(false));
   }, [process]);
 

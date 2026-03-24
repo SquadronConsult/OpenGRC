@@ -6,6 +6,8 @@ import {
   JoinColumn,
   OneToMany,
 } from 'typeorm';
+import { ChecklistItemStatus } from './enums/grc-enums';
+import { datetimeColumnType } from '../db/column-types';
 import { Project } from './project.entity';
 import { User } from './user.entity';
 import { FrrRequirement } from './frr-requirement.entity';
@@ -41,15 +43,20 @@ export class ChecklistItem {
   ksiIndicator: KsiIndicator;
 
   /** Unified catalog requirement (generic framework model); FRR/KSI remain during rollout. */
-  @Column({ name: 'catalog_requirement_id', type: 'varchar', nullable: true })
+  @Column({ name: 'catalog_requirement_id', type: 'uuid', nullable: true })
   catalogRequirementId: string | null;
 
   @ManyToOne(() => CatalogRequirement, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'catalog_requirement_id' })
   catalogRequirement: CatalogRequirement | null;
 
-  @Column({ type: 'varchar', default: 'not_started' })
-  status: string;
+  @Column({
+    type: 'varchar',
+    length: 32,
+    enum: ChecklistItemStatus,
+    default: ChecklistItemStatus.NotStarted,
+  })
+  status: ChecklistItemStatus;
 
   @Column({ name: 'owner_user_id', type: 'varchar', nullable: true })
   ownerUserId: string | null;
@@ -58,7 +65,7 @@ export class ChecklistItem {
   @JoinColumn({ name: 'owner_user_id' })
   ownerUser: User;
 
-  @Column({ name: 'due_date', type: 'datetime', nullable: true })
+  @Column({ name: 'due_date', type: datetimeColumnType, nullable: true })
   dueDate: Date | null;
 
   @Column({ name: 'review_state', nullable: true })

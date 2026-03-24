@@ -21,6 +21,10 @@ import {
   residualNeedsOverride,
   riskBand,
 } from './risk-scoring';
+import {
+  RiskAcceptanceRequestStatus,
+  RiskStatus,
+} from '../entities/enums/grc-enums';
 
 @Injectable()
 export class RiskService {
@@ -139,7 +143,7 @@ export class RiskService {
       residualImpact: dto.residualImpact != null ? clampLhi(dto.residualImpact) : null,
       residualScore,
       residualOverrideReason: overrideReason,
-      status: dto.status || 'open',
+      status: (dto.status as RiskStatus | undefined) ?? RiskStatus.Open,
       ownerUserId: dto.ownerUserId ?? userId,
       appetiteDecision: dto.appetiteDecision ?? null,
       acceptanceExpiresAt: dto.acceptanceExpiresAt
@@ -184,7 +188,7 @@ export class RiskService {
       r.residualImpact =
         dto.residualImpact === null ? null : clampLhi(dto.residualImpact);
     }
-    if (dto.status !== undefined) r.status = dto.status;
+    if (dto.status !== undefined) r.status = dto.status as RiskStatus;
     if (dto.ownerUserId !== undefined) r.ownerUserId = dto.ownerUserId;
     if (dto.appetiteDecision !== undefined) r.appetiteDecision = dto.appetiteDecision;
     if (dto.acceptanceExpiresAt !== undefined) {
@@ -385,7 +389,7 @@ export class RiskService {
       if (!u) throw new BadRequestException(`Invalid approver user id: ${uid}`);
     }
     const pending = await this.rar.findOne({
-      where: { riskId, status: 'submitted' },
+      where: { riskId, status: RiskAcceptanceRequestStatus.Submitted },
     });
     if (pending) {
       throw new BadRequestException(
@@ -396,7 +400,7 @@ export class RiskService {
       id: randomUUID(),
       riskId,
       projectId,
-      status: 'submitted',
+      status: RiskAcceptanceRequestStatus.Submitted,
       submittedById: userId,
       submittedAt: new Date(),
       notes: body.notes ?? null,
@@ -417,7 +421,7 @@ export class RiskService {
       status: 'pending',
     });
     await this.ras.save([s1, s2]);
-    risk.status = 'treating';
+    risk.status = RiskStatus.Treating;
     await this.risks.save(risk);
     return this.getById(projectId, riskId, userId, role);
   }
@@ -460,8 +464,11 @@ export class RiskService {
       where: { requestId: step.requestId, status: 'pending' },
     });
     if (stillPending === 0) {
-      await this.rar.update({ id: step.requestId }, { status: 'approved' });
-      risk.status = 'accepted';
+      await this.rar.update(
+        { id: step.requestId },
+        { status: RiskAcceptanceRequestStatus.Approved },
+      );
+      risk.status = RiskStatus.Accepted;
       await this.risks.save(risk);
     }
     return this.getById(projectId, riskId, userId, role);
@@ -501,8 +508,11 @@ export class RiskService {
     step.notes = body.notes ?? null;
     step.actedAt = new Date();
     await this.ras.save(step);
-    await this.rar.update({ id: step.requestId }, { status: 'rejected' });
-    risk.status = 'open';
+    await this.rar.update(
+      { id: step.requestId },
+      { status: RiskAcceptanceRequestStatus.Rejected },
+    );
+    risk.status = RiskStatus.Open;
     await this.risks.save(risk);
     return this.getById(projectId, riskId, userId, role);
   }

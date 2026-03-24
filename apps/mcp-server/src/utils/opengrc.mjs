@@ -68,7 +68,7 @@ export async function syncGrcEvidence(payload) {
     };
   }
   if (!payload?.checklistItemId) {
-    throw new Error('checklistItemId is required for sync_grc_evidence');
+    throw new Error('checklistItemId is required for sync_grc_evidence_v1');
   }
 
   const parsed = await postJson('/integrations/scanner/summary', {

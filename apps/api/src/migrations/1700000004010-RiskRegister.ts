@@ -6,11 +6,12 @@ export class RiskRegister1700000004010 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     const driver = queryRunner.connection.options.type;
+    const uuidType = driver === 'sqlite' ? 'varchar(36)' : 'uuid';
     if (driver === 'sqlite') {
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "risks" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "project_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "project_id" ${uuidType} NOT NULL,
           "title" varchar NOT NULL,
           "description" text,
           "category" varchar,
@@ -22,7 +23,7 @@ export class RiskRegister1700000004010 implements MigrationInterface {
           "residual_score" integer,
           "residual_override_reason" text,
           "status" varchar NOT NULL DEFAULT 'open',
-          "owner_user_id" varchar(36),
+          "owner_user_id" ${uuidType},
           "appetite_decision" varchar,
           "acceptance_expires_at" datetime,
           "created_at" datetime NOT NULL DEFAULT (datetime('now')),
@@ -36,9 +37,9 @@ export class RiskRegister1700000004010 implements MigrationInterface {
       `);
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "risk_checklist_mitigations" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "risk_id" varchar(36) NOT NULL,
-          "checklist_item_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "risk_id" ${uuidType} NOT NULL,
+          "checklist_item_id" ${uuidType} NOT NULL,
           "notes" text,
           CONSTRAINT "FK_rcm_risk" FOREIGN KEY ("risk_id") REFERENCES "risks" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
           CONSTRAINT "FK_rcm_checklist" FOREIGN KEY ("checklist_item_id") REFERENCES "checklist_items" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
@@ -55,9 +56,9 @@ export class RiskRegister1700000004010 implements MigrationInterface {
       `);
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "risk_internal_control_mitigations" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "risk_id" varchar(36) NOT NULL,
-          "internal_control_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "risk_id" ${uuidType} NOT NULL,
+          "internal_control_id" ${uuidType} NOT NULL,
           "notes" text,
           CONSTRAINT "FK_ricm_risk" FOREIGN KEY ("risk_id") REFERENCES "risks" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
           CONSTRAINT "FK_ricm_ic" FOREIGN KEY ("internal_control_id") REFERENCES "internal_controls" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
@@ -71,11 +72,11 @@ export class RiskRegister1700000004010 implements MigrationInterface {
       `);
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "risk_acceptance_requests" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "risk_id" varchar(36) NOT NULL,
-          "project_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "risk_id" ${uuidType} NOT NULL,
+          "project_id" ${uuidType} NOT NULL,
           "status" varchar NOT NULL DEFAULT 'draft',
-          "submitted_by_id" varchar(36),
+          "submitted_by_id" ${uuidType},
           "submitted_at" datetime,
           "notes" text,
           "created_at" datetime NOT NULL DEFAULT (datetime('now')),
@@ -92,10 +93,10 @@ export class RiskRegister1700000004010 implements MigrationInterface {
       `);
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "risk_acceptance_steps" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "request_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "request_id" ${uuidType} NOT NULL,
           "order_index" integer NOT NULL,
-          "approver_user_id" varchar(36) NOT NULL,
+          "approver_user_id" ${uuidType} NOT NULL,
           "status" varchar NOT NULL DEFAULT 'pending',
           "notes" text,
           "acted_at" datetime,
@@ -110,8 +111,8 @@ export class RiskRegister1700000004010 implements MigrationInterface {
     } else {
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "risks" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "project_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "project_id" ${uuidType} NOT NULL,
           "title" varchar NOT NULL,
           "description" text,
           "category" varchar,
@@ -123,7 +124,7 @@ export class RiskRegister1700000004010 implements MigrationInterface {
           "residual_score" integer,
           "residual_override_reason" text,
           "status" varchar NOT NULL DEFAULT 'open',
-          "owner_user_id" varchar(36),
+          "owner_user_id" ${uuidType},
           "appetite_decision" varchar,
           "acceptance_expires_at" TIMESTAMPTZ,
           "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -137,9 +138,9 @@ export class RiskRegister1700000004010 implements MigrationInterface {
       `);
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "risk_checklist_mitigations" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "risk_id" varchar(36) NOT NULL,
-          "checklist_item_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "risk_id" ${uuidType} NOT NULL,
+          "checklist_item_id" ${uuidType} NOT NULL,
           "notes" text,
           CONSTRAINT "FK_rcm_risk" FOREIGN KEY ("risk_id") REFERENCES "risks" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
           CONSTRAINT "FK_rcm_checklist" FOREIGN KEY ("checklist_item_id") REFERENCES "checklist_items" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
@@ -156,9 +157,9 @@ export class RiskRegister1700000004010 implements MigrationInterface {
       `);
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "risk_internal_control_mitigations" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "risk_id" varchar(36) NOT NULL,
-          "internal_control_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "risk_id" ${uuidType} NOT NULL,
+          "internal_control_id" ${uuidType} NOT NULL,
           "notes" text,
           CONSTRAINT "FK_ricm_risk" FOREIGN KEY ("risk_id") REFERENCES "risks" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
           CONSTRAINT "FK_ricm_ic" FOREIGN KEY ("internal_control_id") REFERENCES "internal_controls" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
@@ -172,11 +173,11 @@ export class RiskRegister1700000004010 implements MigrationInterface {
       `);
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "risk_acceptance_requests" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "risk_id" varchar(36) NOT NULL,
-          "project_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "risk_id" ${uuidType} NOT NULL,
+          "project_id" ${uuidType} NOT NULL,
           "status" varchar NOT NULL DEFAULT 'draft',
-          "submitted_by_id" varchar(36),
+          "submitted_by_id" ${uuidType},
           "submitted_at" TIMESTAMPTZ,
           "notes" text,
           "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -193,10 +194,10 @@ export class RiskRegister1700000004010 implements MigrationInterface {
       `);
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "risk_acceptance_steps" (
-          "id" varchar(36) PRIMARY KEY NOT NULL,
-          "request_id" varchar(36) NOT NULL,
+          "id" ${uuidType} PRIMARY KEY NOT NULL,
+          "request_id" ${uuidType} NOT NULL,
           "order_index" integer NOT NULL,
-          "approver_user_id" varchar(36) NOT NULL,
+          "approver_user_id" ${uuidType} NOT NULL,
           "status" varchar NOT NULL DEFAULT 'pending',
           "notes" text,
           "acted_at" TIMESTAMPTZ,

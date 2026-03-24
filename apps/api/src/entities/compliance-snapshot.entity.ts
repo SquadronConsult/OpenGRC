@@ -6,6 +6,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
+import { datetimeColumnType } from '../db/column-types';
 import { Project } from './project.entity';
 
 @Entity('compliance_snapshots')
@@ -20,7 +21,7 @@ export class ComplianceSnapshot {
   @JoinColumn({ name: 'project_id' })
   project: Project;
 
-  @Column({ name: 'captured_at', type: 'datetime' })
+  @Column({ name: 'captured_at', type: datetimeColumnType })
   capturedAt: Date;
 
   @Column({ name: 'total_controls', type: 'int' })

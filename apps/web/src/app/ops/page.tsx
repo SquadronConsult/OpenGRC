@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Activity, Database, FolderArchive, HardDrive, Server, FileText } from 'lucide-react';
+import { Database, FolderArchive, HardDrive, Server, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { getApiBase } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,8 +11,14 @@ type OpsPayload = {
   apiVersion?: string;
   schemaVersion?: string;
   dbType?: string;
-  sqlitePath?: string;
+  sqlitePath?: string | null;
   sqliteBytes?: number | null;
+  postgres?: {
+    host: string;
+    port: number;
+    database: string;
+    username: string;
+  } | null;
   evidenceDir?: string;
   localDataDir?: string;
   frmrLoaded?: boolean;
@@ -84,11 +90,9 @@ export default function LocalOpsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Operations</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Diagnostics: API version, data paths, FRMR state, and database mode. Use{' '}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs font-mono">
-              POST /health/backup
-            </code>{' '}
-            (authenticated) for SQLite snapshots.
+            Diagnostics: API version, data paths, FRMR state, and database mode. For SQLite dev
+            installs, <code className="rounded bg-muted px-1 py-0.5 text-xs font-mono">POST /health/backup</code>{' '}
+            (authenticated) snapshots the DB file; Postgres deployments should use native backup tools.
           </p>
         </div>
       </div>
@@ -126,15 +130,34 @@ export default function LocalOpsPage() {
             </p>
           </OpsCard>
 
-          <OpsCard icon={HardDrive} title="SQLite Path">
-            <p className="break-all">{data.sqlitePath ?? '—'}</p>
-            <p className="mt-1">
-              Size:{' '}
-              {data.sqliteBytes != null
-                ? `${(data.sqliteBytes / 1024).toFixed(1)} KB`
-                : '—'}
-            </p>
-          </OpsCard>
+          {data.dbType === 'postgres' ? (
+            data.postgres ? (
+              <OpsCard icon={Server} title="PostgreSQL">
+                <p className="break-all font-mono text-xs text-foreground">
+                  {data.postgres.username}@{data.postgres.host}:{data.postgres.port}/{data.postgres.database}
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Runtime connection (password not shown). No SQLite file is used in this mode.
+                </p>
+              </OpsCard>
+            ) : (
+              <OpsCard icon={Server} title="PostgreSQL">
+                <p className="text-muted-foreground">
+                  Database driver is Postgres; host/database details were not exposed on this response.
+                </p>
+              </OpsCard>
+            )
+          ) : (
+            <OpsCard icon={HardDrive} title="SQLite file">
+              <p className="break-all">{data.sqlitePath ?? '—'}</p>
+              <p className="mt-1">
+                Size:{' '}
+                {data.sqliteBytes != null
+                  ? `${(data.sqliteBytes / 1024).toFixed(1)} KB`
+                  : '—'}
+              </p>
+            </OpsCard>
+          )}
 
           <OpsCard icon={FolderArchive} title="Evidence Dir">
             <p className="break-all">{data.evidenceDir ?? '—'}</p>

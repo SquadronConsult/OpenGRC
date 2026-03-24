@@ -128,6 +128,18 @@
   code {
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
   }
+  /*
+   * Native <select> does not always inherit text color (often stays browser grey).
+   * Force readable closed-state text; option list uses light surface + black text for contrast.
+   */
+  select {
+    color: var(--foreground);
+  }
+  select option,
+  select optgroup {
+    color: #0a0a0a;
+    background-color: #ffffff;
+  }
 }
 
 /* Scrollbar */

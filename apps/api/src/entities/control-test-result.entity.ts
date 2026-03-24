@@ -6,6 +6,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
+import { datetimeColumnType } from '../db/column-types';
 import { Project } from './project.entity';
 import { ChecklistItem } from './checklist-item.entity';
 import { IntegrationConnectorRun } from './integration-connector-run.entity';
@@ -35,13 +36,13 @@ export class ControlTestResult {
   @Column({ type: 'varchar' })
   result: 'pass' | 'fail' | 'not_tested';
 
-  @Column({ name: 'tested_at', type: 'datetime', nullable: true })
+  @Column({ name: 'tested_at', type: datetimeColumnType, nullable: true })
   testedAt: Date | null;
 
-  @Column({ name: 'next_test_date', type: 'datetime', nullable: true })
+  @Column({ name: 'next_test_date', type: datetimeColumnType, nullable: true })
   nextTestDate: Date | null;
 
-  @Column({ name: 'connector_run_id', type: 'varchar', nullable: true })
+  @Column({ name: 'connector_run_id', type: 'uuid', nullable: true })
   connectorRunId: string | null;
 
   @ManyToOne(() => IntegrationConnectorRun, { nullable: true, onDelete: 'SET NULL' })

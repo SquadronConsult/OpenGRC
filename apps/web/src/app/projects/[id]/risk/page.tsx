@@ -145,12 +145,22 @@ export default function ProjectRiskPage({ params }: { params: { id: string } }) 
         `/projects/${id}/checklist?limit=200`,
       )
         .then((r) => listItems(r))
-        .catch(() => [] as ChecklistRow[]),
+        .catch((e: unknown) => {
+          toast.error(
+            e instanceof Error ? e.message : 'Could not load checklist items for linking',
+          );
+          return [] as ChecklistRow[];
+        }),
       api<InternalControlRow[] | PaginatedList<InternalControlRow>>(
         `/catalog/internal-controls?limit=200`,
       )
         .then((r) => listItems(r))
-        .catch(() => [] as InternalControlRow[]),
+        .catch((e: unknown) => {
+          toast.error(
+            e instanceof Error ? e.message : 'Could not load internal controls for linking',
+          );
+          return [] as InternalControlRow[];
+        }),
     ]);
     setList(risks);
     setHeatmap(hm);
@@ -174,7 +184,10 @@ export default function ProjectRiskPage({ params }: { params: { id: string } }) 
     }
     api<RiskDetail>(`/projects/${id}/risks/${selectedId}`)
       .then(setDetail)
-      .catch(() => setDetail(null));
+      .catch((e: unknown) => {
+        toast.error(e instanceof Error ? e.message : 'Could not load risk details');
+        setDetail(null);
+      });
   }, [id, selectedId]);
 
   const filteredList = useMemo(() => {
@@ -582,7 +595,7 @@ export default function ProjectRiskPage({ params }: { params: { id: string } }) 
                 </TableBody>
               </Table>
               <select
-                className="h-9 max-w-xs rounded-md border border-input bg-background px-3 text-sm"
+                className="h-9 max-w-xs rounded-md border border-input bg-background px-3 text-sm text-foreground"
                 defaultValue=""
                 aria-label="Link checklist item"
                 onChange={(e) => {
@@ -617,7 +630,7 @@ export default function ProjectRiskPage({ params }: { params: { id: string } }) 
                 {detail.internalControlMitigations.length === 0 && <li>None linked</li>}
               </ul>
               <select
-                className="h-9 max-w-sm rounded-md border border-input bg-background px-3 text-sm"
+                className="h-9 max-w-sm rounded-md border border-input bg-background px-3 text-sm text-foreground"
                 defaultValue=""
                 aria-label="Link internal control"
                 onChange={(e) => {
@@ -799,7 +812,7 @@ export default function ProjectRiskPage({ params }: { params: { id: string } }) 
               <Label htmlFor="risk-status">Status</Label>
               <select
                 id="risk-status"
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground"
                 value={form.status}
                 onChange={(e) => setForm({ ...form, status: e.target.value })}
               >

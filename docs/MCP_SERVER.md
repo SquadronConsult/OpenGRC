@@ -4,8 +4,8 @@ This project now runs MCP as a host daemon with Streamable HTTP transport so Cur
 
 ## Runtime Model
 
-- **Protocol version:** `MCP_PROTOCOL_VERSION` (default `1.0.0` in `apps/mcp-server/src/config.mjs`). `mcp_capabilities_v1` returns `mcpProtocolVersion` and `opengrcApiVersion` for agents to pin expectations.
-- Docker services run app components (`api`, `web`, optional `mcp` container for parity).
+- **Protocol version:** `MCP_PROTOCOL_VERSION` (default `1.0.0` in `apps/mcp-server/src/config.mjs`). `capabilities_v1` returns `mcpProtocolVersion` and `opengrcApiVersion` for agents to pin expectations.
+- **Docker:** the repo has a single Compose stack ([`docker-compose.yml`](../docker-compose.yml)) — one container with Postgres, API, and web. The MCP server itself is usually run **on the host** (this daemon), not inside Docker.
 - MCP client traffic goes to host daemon URL:
   - `http://127.0.0.1:3334/mcp`
 - The daemon process is started/stopped with:
@@ -13,11 +13,13 @@ This project now runs MCP as a host daemon with Streamable HTTP transport so Cur
   - `npm run mcp:daemon:stop`
   - `npm run mcp:daemon:status`
 
-## Start Stack
+## Start OpenGRC (Docker)
 
 ```bash
 docker compose up --build
 ```
+
+Web UI: `http://localhost:8080`. Set `OPEN_GRC_API_URL=http://127.0.0.1:8080/api` for this MCP daemon when calling the API from the host.
 
 ## One-Click Cursor Deployment
 
@@ -104,20 +106,20 @@ Use the same localhost MCP URL:
 
 ## Verification Flow
 
-1. `mcp_capabilities_v1`
+1. `capabilities_v1`
 2. `list_tools` (client-native)
-3. `dry_run_remediation` with a minimal single-file change
+3. `dry_run_remediation_v1` with a minimal single-file change
 
 ## Exposed MCP Tools
 
-- `mcp_capabilities_v1`
-- `repo_inventory`
-- `control_gap_map`
-- `remediation_plan`
-- `apply_remediation`
-- `dry_run_remediation`
-- `validate_remediation`
-- `sync_grc_evidence`
+- `capabilities_v1`
+- `repo_inventory_v1`
+- `control_gap_map_v1`
+- `remediation_plan_v1`
+- `apply_remediation_v1`
+- `dry_run_remediation_v1`
+- `validate_remediation_v1`
+- `sync_grc_evidence_v1`
 - `evidence_link_upsert_v1`
 - `evidence_link_bulk_ingest_v1`
 - `evidence_link_lookup_control_v1`
@@ -129,10 +131,16 @@ Use the same localhost MCP URL:
 - `compliance_agent_autopilot_v1`
 - `fedramp_oscal_report_v1`
 - `gap_closure_execution_brief_v1`
-- `list_skills`
-- `run_skill_agent`
-- `get_run_log`
-- `rollback_run`
+- `list_skills_v1`
+- `run_skill_agent_v1`
+- `get_run_log_v1`
+- `rollback_run_v1`
+- `connectors_registry_v1`
+- `connectors_list_v1`
+- `connectors_status_v1`
+- `connectors_run_v1`
+- `connectors_runs_v1`
+- `connectors_create_v1`
 
 ## Full Autofix Guardrails
 
@@ -156,16 +164,18 @@ Use the same localhost MCP URL:
 - `MCP_MAX_FILES_PER_RUN`
 - `MCP_MAX_STEPS_PER_RUN`
 - `MCP_COMMAND_TIMEOUT_MS`
-- `OPEN_GRC_API_URL` (default `http://api:3000`)
+- `OPEN_GRC_API_URL` — base URL for API requests (include `/api` when using the all-in-one image from the host, e.g. `http://127.0.0.1:8080/api`; local Node dev is often `http://127.0.0.1:3000` with no `/api` prefix)
 - `INTEGRATION_API_KEY`
 
 ## Evidence Sync
 
-`sync_grc_evidence` posts scanner summaries into OpenGRC integration endpoint:
+`sync_grc_evidence_v1` posts scanner summaries into OpenGRC integration endpoint:
 
 - `POST /integrations/scanner/summary`
 
 Requires `INTEGRATION_API_KEY` to be set for the MCP service.
+
+**Connectors:** `connectors_*_v1` tools manage **automated evidence-collection integrations** (e.g. GitHub or cloud scanners) that pull artifacts into OpenGRC for checklist mapping. Use registry/list for configuration; status/run/runs for operations; create to add an instance.
 
 ## Evidence Linkage Toolset (v1)
 
@@ -340,7 +350,7 @@ Example:
 
 Recommended deterministic sequence for an AI agent:
 
-1. `mcp_capabilities_v1`
+1. `capabilities_v1`
 2. `frmr_taxonomy_v1` with `pathType: \"20x\"`
 3. `gap_closure_execution_brief_v1`
 4. `compliance_agent_autopilot_v1` with `executionMode: \"apply\"`
@@ -348,7 +358,7 @@ Recommended deterministic sequence for an AI agent:
 
 ### MCP help tool (recommended first call)
 
-Use `mcp_capabilities_v1` to return a machine-friendly "how to use this MCP" guide with:
+Use `capabilities_v1` to return a machine-friendly "how to use this MCP" guide with:
 
 - prerequisites (`OPEN_GRC_API_URL`, `INTEGRATION_API_KEY`)
 - recommended starting tool
@@ -365,7 +375,9 @@ Example call payload:
 
 Prompt pattern for agents:
 
-`Call mcp_capabilities_v1 first, then execute compliance_agent_autopilot_v1 using the recommended flow.`
+`Call capabilities_v1 first, then execute compliance_agent_autopilot_v1 using the recommended flow.`
+
+Tool descriptions: `capabilities_v1` is the entrypoint (**START HERE**). `frmr_taxonomy_v1` uses **FRMR** (FedRAMP Requirements and Metrics Repository) and **KSI** (Key Security Indicators); **20x** / **rev5** are FedRAMP path types. `fedramp_oscal_report_v1` outputs **OSCAL** (Open Security Controls Assessment Language), **SSP** (System Security Plan), and **POA&M** (Plan of Action and Milestones). `compliance_agent_autopilot_v1` is **RECOMMENDED** for end-to-end orchestration.
 
 ## Audit Logs
 
@@ -375,8 +387,8 @@ Run logs are written to:
 
 Retrieve via tool:
 
-- `get_run_log`
+- `get_run_log_v1`
 
 Rollback via tool:
 
-- `rollback_run`
+- `rollback_run_v1`

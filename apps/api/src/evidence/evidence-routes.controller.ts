@@ -20,6 +20,7 @@ import { EvidenceItem } from '../entities/evidence-item.entity';
 import { ProjectsService } from '../projects/projects.service';
 import { StorageService } from '../storage/storage.service';
 import { AuditService } from '../audit/audit.service';
+import { EvidenceReviewState } from '../entities/enums/grc-enums';
 
 @Controller('evidence')
 @UseGuards(JwtAuthGuard)
@@ -103,7 +104,7 @@ export class EvidenceRoutesController {
             'Segregation: uploader cannot review own evidence',
           );
         }
-        row.reviewState = b.reviewState;
+        row.reviewState = b.reviewState as EvidenceReviewState;
         await em.save(row);
         updated.push(row);
         await this.audit.log(req.user.userId, 'evidence.bulk_review', 'evidence', id, {

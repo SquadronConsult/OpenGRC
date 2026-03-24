@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   OneToMany,
 } from 'typeorm';
+import { datetimeColumnType } from '../db/column-types';
 import { ProjectMember } from './project-member.entity';
 
 export type UserRole = 'admin' | 'csp_manager' | 'engineer' | 'assessor' | 'agency_reviewer';
@@ -29,11 +30,15 @@ export class User {
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;
 
-  @Column({ name: 'password_set_at', type: 'datetime', nullable: true })
+  @Column({ name: 'password_set_at', type: datetimeColumnType, nullable: true })
   passwordSetAt: Date | null;
 
-  @Column({ name: 'last_login_at', type: 'datetime', nullable: true })
+  @Column({ name: 'last_login_at', type: datetimeColumnType, nullable: true })
   lastLoginAt: Date | null;
+
+  /** True until the user sets a new password after initial env-based admin login. */
+  @Column({ name: 'must_change_password', type: 'boolean', default: false })
+  mustChangePassword: boolean;
 
   /** local | oidc | ... — OIDC-ready linkage */
   @Column({ name: 'auth_provider', type: 'varchar', default: 'local' })

@@ -8,6 +8,7 @@ import {
   JoinColumn,
   OneToMany,
 } from 'typeorm';
+import { datetimeColumnType } from '../db/column-types';
 import { Project } from './project.entity';
 import { User } from './user.entity';
 import { AuditFinding } from './audit-finding.entity';
@@ -46,10 +47,10 @@ export class GrcAudit {
   @Column({ type: 'text', nullable: true })
   scope: string | null;
 
-  @Column({ name: 'planned_start', type: 'datetime', nullable: true })
+  @Column({ name: 'planned_start', type: datetimeColumnType, nullable: true })
   plannedStart: Date | null;
 
-  @Column({ name: 'planned_end', type: 'datetime', nullable: true })
+  @Column({ name: 'planned_end', type: datetimeColumnType, nullable: true })
   plannedEnd: Date | null;
 
   @OneToMany(() => AuditFinding, (f) => f.audit)

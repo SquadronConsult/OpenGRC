@@ -7,6 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
+import { datetimeColumnType } from '../db/column-types';
 import { ChecklistItem } from './checklist-item.entity';
 
 @Entity('applicability_recommendations')
@@ -50,7 +51,7 @@ export class ApplicabilityRecommendation {
   @Column({ name: 'explainability', type: 'simple-json', nullable: true })
   explainability: Record<string, unknown> | null;
 
-  @Column({ name: 'applied_at', type: 'datetime', nullable: true })
+  @Column({ name: 'applied_at', type: datetimeColumnType, nullable: true })
   appliedAt: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })
