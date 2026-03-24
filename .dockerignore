@@ -3,6 +3,7 @@
 apps/api/dist
 apps/web/.next
 **/*.sqlite
-**/evidence
+# Runtime evidence uploads at repo root only — do NOT use **/evidence (excludes apps/api/src/evidence)
+/evidence
 .env
 .env.*
