@@ -4,6 +4,7 @@ import { createHmac } from 'crypto';
 import { Repository } from 'typeorm';
 import { WebhookSubscription } from '../entities/webhook-subscription.entity';
 import { toPaginated } from '../common/pagination/paginated-result';
+import { validateWebhookUrl, webhookFetchTimeoutMs } from './webhook-url.util';
 
 @Injectable()
 export class WebhooksService {
@@ -28,6 +29,11 @@ export class WebhooksService {
       const evs = Array.isArray(s.events) ? s.events : [];
       if (!evs.includes('*') && !evs.includes(event)) continue;
       try {
+        const unsafe = await validateWebhookUrl(s.url);
+        if (unsafe) {
+          this.log.warn(`Webhook skipped (unsafe URL): ${s.url} — ${unsafe}`);
+          continue;
+        }
         const sig = s.secret
           ? createHmac('sha256', s.secret).update(body).digest('hex')
           : '';
@@ -38,6 +44,7 @@ export class WebhooksService {
             ...(sig ? { 'X-GRC-Signature': sig } : {}),
           },
           body,
+          signal: AbortSignal.timeout(webhookFetchTimeoutMs()),
         });
       } catch (e) {
         this.log.warn(`Webhook failed ${s.url}: ${e}`);

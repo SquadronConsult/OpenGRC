@@ -7,6 +7,7 @@ dist/
 pgdata/
 .DS_Store
 .cursor/
+.claude/
 local-data/
 # Runtime evidence exports only (do not ignore apps/api/src/evidence/ API module)
 /evidence/

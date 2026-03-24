@@ -21,8 +21,13 @@ if [ -z "${AUTH_JWT_SECRET:-}" ]; then
   export AUTH_JWT_SECRET=dev-local-change-me-in-production
 fi
 
+if [ "${NODE_ENV:-}" = "production" ] && [ -z "${CONNECTOR_ENCRYPTION_KEY:-}" ]; then
+  echo "ERROR: CONNECTOR_ENCRYPTION_KEY must be set in production (base64-encoded 32 bytes)." >&2
+  exit 1
+fi
+
 cd /app/api
-node dist/main.js &
+gosu grcapp node dist/main.js &
 API_PID=$!
 
 API_PORT="${PORT:-3000}"
@@ -34,7 +39,7 @@ for _ in $(seq 1 120); do
 done
 
 cd /app/web
-PORT=3001 HOSTNAME=0.0.0.0 node node_modules/.bin/next start -p 3001 &
+PORT=3001 HOSTNAME=0.0.0.0 gosu grcapp node node_modules/.bin/next start -p 3001 &
 WEB_PID=$!
 
 term() {

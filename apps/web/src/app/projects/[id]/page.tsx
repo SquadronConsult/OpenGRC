@@ -7,7 +7,6 @@ import {
   ChevronLeft,
   Search,
   Download,
-  Zap,
   Upload,
   AlertTriangle,
   PlugZap,
@@ -73,7 +72,6 @@ export default function ProjectDetailPage({
 }) {
   const { id } = params;
   const [items, setItems] = useState<Item[] | null>(null);
-  const [generating, setGenerating] = useState(false);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [connBanner, setConnBanner] = useState<{
@@ -157,7 +155,6 @@ export default function ProjectDetailPage({
   }, [items, filter, search]);
 
   async function generate() {
-    setGenerating(true);
     try {
       const r = await api<{ created: number }>(
         `/projects/${id}/checklist/generate`,
@@ -167,8 +164,6 @@ export default function ProjectDetailPage({
       load();
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Error generating checklist');
-    } finally {
-      setGenerating(false);
     }
   }
 
@@ -246,10 +241,6 @@ export default function ProjectDetailPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={generate} disabled={generating}>
-            <Zap size={14} />
-            {generating ? 'Generating...' : 'Generate Checklist'}
-          </Button>
           <Button variant="secondary" onClick={exportMd}>
             <Download size={14} />
             Export Markdown
@@ -428,7 +419,7 @@ export default function ProjectDetailPage({
               <TableHead>Requirement</TableHead>
               <TableHead className="w-[140px]">Status</TableHead>
               <TableHead className="w-[170px]">Due Date</TableHead>
-              <TableHead className="w-[120px]">Evidence</TableHead>
+              <TableHead className="min-w-[11rem] w-[11rem]">Evidence</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -461,7 +452,7 @@ export default function ProjectDetailPage({
               <TableHead>Requirement</TableHead>
               <TableHead className="w-[140px]">Status</TableHead>
               <TableHead className="w-[170px]">Due Date</TableHead>
-              <TableHead className="w-[120px]">Evidence</TableHead>
+              <TableHead className="min-w-[11rem] w-[11rem]">Evidence</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -523,7 +514,7 @@ export default function ProjectDetailPage({
                     onChange={(e) => setDueDate(i.id, e.target.value)}
                   />
                 </TableCell>
-                <TableCell className="align-top">
+                <TableCell className="align-top whitespace-normal min-w-[11rem]">
                   <EvidenceUploadButton
                     onUpload={(file) => uploadEvidence(i.id, file)}
                   />
@@ -563,10 +554,11 @@ function EvidenceUploadButton({
       <Button
         variant="ghost"
         size="sm"
+        className="h-auto shrink-0 gap-1.5 whitespace-nowrap px-2 py-1.5"
         onClick={() => inputRef.current?.click()}
       >
-        <Upload size={14} />
-        Upload
+        <Upload size={14} className="shrink-0" aria-hidden />
+        <span>Upload</span>
       </Button>
       <input
         ref={inputRef}

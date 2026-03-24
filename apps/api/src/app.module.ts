@@ -52,6 +52,7 @@ import { FrmrCatalogSyncService } from './catalog/frmr-catalog-sync.service';
 import { CatalogPackageService } from './catalog/catalog-package.service';
 import { ConnectorsController } from './connectors/connectors.controller';
 import { ConnectorRegistry } from './connectors/connector-registry';
+import { ConnectorConfigCryptoService } from './connectors/connector-config-crypto.service';
 import { ConnectorOrchestratorService } from './connectors/connector-orchestrator.service';
 import { ConnectorInstanceService } from './connectors/connector-instance.service';
 import { ConnectorSchedulerService } from './connectors/connector-scheduler.service';
@@ -209,6 +210,7 @@ function buildTypeOrmConfig() {
     SlackConnector,
     TeamsConnector,
     ConnectorRegistry,
+    ConnectorConfigCryptoService,
     ConnectorOrchestratorService,
     ConnectorInstanceService,
     ConnectorSchedulerService,

@@ -6,6 +6,7 @@ import { IntegrationConnectorRun } from '../entities/integration-connector-run.e
 import { ProjectsService } from '../projects/projects.service';
 import { ConnectorRegistry } from './connector-registry';
 import { ConnectorOrchestratorService } from './connector-orchestrator.service';
+import { ConnectorConfigCryptoService } from './connector-config-crypto.service';
 import { parseConfigJson, redactObject } from './connector-redact';
 import type { CreateConnectorInstanceDto, UpdateConnectorInstanceDto } from './dto/connector-instance.dto';
 export { CreateConnectorInstanceDto, UpdateConnectorInstanceDto } from './dto/connector-instance.dto';
@@ -20,6 +21,7 @@ export class ConnectorInstanceService {
     private readonly projects: ProjectsService,
     private readonly registry: ConnectorRegistry,
     private readonly orchestrator: ConnectorOrchestratorService,
+    private readonly configCrypto: ConnectorConfigCryptoService,
   ) {}
 
   listRegistry() {
@@ -93,13 +95,14 @@ export class ConnectorInstanceService {
     if (!this.registry.get(dto.connectorId)) {
       throw new NotFoundException(`Unknown connector_id: ${dto.connectorId}`);
     }
+    const cfg = this.configCrypto.encryptConfigObject((dto.config || {}) as Record<string, unknown>);
     const row = await this.instances.save(
       this.instances.create({
         projectId,
         connectorId: dto.connectorId,
         label: dto.label,
         enabled: dto.enabled !== false,
-        configJson: JSON.stringify(dto.config || {}),
+        configJson: JSON.stringify(cfg),
         linkedCredentialId: null,
         cursor: null,
         lastRunAt: null,
@@ -141,7 +144,11 @@ export class ConnectorInstanceService {
     if (!row) throw new NotFoundException('Connector instance not found');
     if (patch.label !== undefined) row.label = patch.label;
     if (patch.enabled !== undefined) row.enabled = patch.enabled;
-    if (patch.config !== undefined) row.configJson = JSON.stringify(patch.config);
+    if (patch.config !== undefined) {
+      row.configJson = JSON.stringify(
+        this.configCrypto.encryptConfigObject(patch.config as Record<string, unknown>),
+      );
+    }
     if (patch.cursor !== undefined) row.cursor = patch.cursor;
     await this.instances.save(row);
     return this.serializeInstance(row);

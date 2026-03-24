@@ -15,9 +15,14 @@ const SECRET_KEYS = new Set([
   'authorization',
 ]);
 
-function redactValue(key: string, v: unknown): unknown {
+/** Same rules as redaction — used when encrypting secret fields at rest. */
+export function isSecretConfigKey(key: string): boolean {
   const k = key.toLowerCase().replace(/[-_]/g, '');
-  if (SECRET_KEYS.has(k) || k.includes('secret') || k.includes('token') || k.includes('password')) {
+  return SECRET_KEYS.has(k) || k.includes('secret') || k.includes('token') || k.includes('password');
+}
+
+function redactValue(key: string, v: unknown): unknown {
+  if (isSecretConfigKey(key)) {
     if (typeof v === 'string' && v.length > 0) return '***redacted***';
     return '***redacted***';
   }

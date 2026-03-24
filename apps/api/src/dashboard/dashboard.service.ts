@@ -67,6 +67,7 @@ export class DashboardService {
       .createQueryBuilder('ci')
       .leftJoinAndSelect('ci.frrRequirement', 'frr')
       .leftJoinAndSelect('ci.catalogRequirement', 'catReq')
+      .leftJoinAndSelect('ci.ksiIndicator', 'ksi')
       .where('ci.dueDate > :now', { now: now.toISOString() })
       .orderBy('ci.dueDate', 'ASC')
       .take(10);
@@ -87,10 +88,14 @@ export class DashboardService {
         controlRef:
           item.catalogRequirement?.requirementCode ??
           item.frrRequirement?.reqKey ??
+          item.ksiIndicator?.indicatorId ??
           '',
         controlName:
           item.catalogRequirement?.statement ??
+          item.frrRequirement?.statement ??
           item.frrRequirement?.name ??
+          item.ksiIndicator?.statement ??
+          item.ksiIndicator?.name ??
           '',
         dueDate: due.toISOString(),
         daysRemaining,

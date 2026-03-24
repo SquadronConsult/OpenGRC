@@ -20,7 +20,7 @@ RUN npm run build
 FROM postgres:16-bookworm
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends curl ca-certificates \
+  && apt-get install -y --no-install-recommends curl ca-certificates gosu \
   && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
   && apt-get install -y --no-install-recommends nodejs \
   && rm -rf /var/lib/apt/lists/*
@@ -43,6 +43,10 @@ ENV NEXT_PUBLIC_API_URL=proxy
 
 WORKDIR /app
 
+# Non-root user for Node (API + Next); Postgres still runs via the official entrypoint as postgres.
+RUN groupadd --system --gid 1000 grcapp \
+  && useradd --system --uid 1000 --gid grcapp --home /app --shell /usr/sbin/nologin grcapp
+
 COPY --from=api-build /app/api/dist ./api/dist
 COPY --from=api-build /app/api/package.json ./api/package.json
 COPY --from=api-build /app/api/package-lock.json ./api/package-lock.json
@@ -54,6 +58,8 @@ COPY --from=web-build /app/web/package.json ./web/package.json
 COPY --from=web-build /app/web/package-lock.json ./web/package-lock.json
 COPY --from=web-build /app/web/next.config.mjs ./web/next.config.mjs
 RUN cd web && npm ci --omit=dev
+
+RUN chown -R grcapp:grcapp /app
 
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

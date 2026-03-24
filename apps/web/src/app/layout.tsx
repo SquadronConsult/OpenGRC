@@ -15,6 +15,7 @@ import {
   FileText,
   Layers,
   Plug,
+  ScrollText,
 } from 'lucide-react';
 import { AuthProvider } from '@/components/AuthProvider';
 import { AuthShell } from '@/components/AuthShell';
@@ -41,6 +42,7 @@ const navSections: { section: string; links: NavItem[] }[] = [
       { href: '/projects', label: 'Projects', icon: LayoutGrid },
       { href: '/mcp', label: 'MCP Connect', icon: Plug },
       { href: '/ops', label: 'Ops', icon: Settings2 },
+      { href: '/docs', label: 'Documentation', icon: ScrollText },
     ],
   },
   {
@@ -165,7 +167,7 @@ export default function RootLayout({
               <div className="flex-1 md:ml-60">
                 <AuthShell>
                   <MicroGoalBanner className="hidden md:flex" />
-                  <main id="main-content" className="mx-auto max-w-[1100px] px-4 py-6 md:px-8 md:py-8 mt-12 md:mt-0">
+                  <main id="main-content" className="mx-auto max-w-[1440px] px-4 py-6 md:px-8 md:py-8 mt-12 md:mt-0">
                     {children}
                   </main>
                 </AuthShell>

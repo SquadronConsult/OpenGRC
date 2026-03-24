@@ -9,7 +9,7 @@ import { ControlTestResult } from '../entities/control-test-result.entity';
 import type { EvidenceUpsertItemDto } from '../integrations/dto/integration-v1.dto';
 import { ConnectorRegistry } from './connector-registry';
 import type { ConnectorEvidenceRecord } from './connector.types';
-import { parseConfigJson } from './connector-redact';
+import { ConnectorConfigCryptoService } from './connector-config-crypto.service';
 
 @Injectable()
 export class ConnectorOrchestratorService {
@@ -24,6 +24,7 @@ export class ConnectorOrchestratorService {
     private readonly testResults: Repository<ControlTestResult>,
     private readonly registry: ConnectorRegistry,
     private readonly evidence: IntegrationEvidenceService,
+    private readonly configCrypto: ConnectorConfigCryptoService,
   ) {}
 
   private recordToDto(rec: ConnectorEvidenceRecord): EvidenceUpsertItemDto {
@@ -86,7 +87,7 @@ export class ConnectorOrchestratorService {
       }),
     );
 
-    const config = parseConfigJson(inst.configJson);
+    const config = this.configCrypto.decryptConfigJson(inst.configJson);
     const cursor = inst.cursor;
 
     try {

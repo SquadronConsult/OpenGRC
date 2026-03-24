@@ -125,6 +125,7 @@ Agent-oriented notes (API conventions, MCP, migrations): [AGENTS.md](AGENTS.md).
 - [docs/PRODUCTION.md](docs/PRODUCTION.md) — TLS, env, operations
 - [docs/AUTO_SCOPING.md](docs/AUTO_SCOPING.md)
 - [docs/MCP_SERVER.md](docs/MCP_SERVER.md)
+- [docs/CONTROLS_PROGRAM.md](docs/CONTROLS_PROGRAM.md) — controls program implementation guide (best practices across NIST, FedRAMP, ISO 27001, SOC 2, CMMC)
 - [docs/BACKUP.md](docs/BACKUP.md)
 - [docs/DESKTOP.md](docs/DESKTOP.md)
 

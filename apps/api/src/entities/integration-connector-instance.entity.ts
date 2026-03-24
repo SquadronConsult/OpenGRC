@@ -34,11 +34,11 @@ export class IntegrationConnectorInstance {
   @Column({ type: 'boolean', default: true })
   enabled: boolean;
 
-  /** JSON: provider tokens, repo paths, default control mapping, pollIntervalMinutes */
+  /** JSON: provider tokens, repo paths, default control mapping, pollIntervalMinutes (secret fields AES-256-GCM when CONNECTOR_ENCRYPTION_KEY is set). */
   @Column({ name: 'config_json', type: 'text' })
   configJson: string;
 
-  /** Optional link to an integration_credentials row for rotation tracking; secrets remain in config_json. */
+  /** Optional link to an integration_credentials row for rotation tracking. */
   @Column({ name: 'linked_credential_id', type: 'uuid', nullable: true })
   linkedCredentialId: string | null;
 

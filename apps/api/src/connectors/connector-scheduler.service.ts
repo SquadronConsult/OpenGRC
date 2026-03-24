@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { IntegrationConnectorInstance } from '../entities/integration-connector-instance.entity';
 import { EvidenceItem } from '../entities/evidence-item.entity';
 import { ConnectorOrchestratorService } from './connector-orchestrator.service';
-import { parseConfigJson } from './connector-redact';
+import { ConnectorConfigCryptoService } from './connector-config-crypto.service';
 
 @Injectable()
 export class ConnectorSchedulerService {
@@ -18,6 +18,7 @@ export class ConnectorSchedulerService {
     @InjectRepository(EvidenceItem)
     private readonly evidence: Repository<EvidenceItem>,
     private readonly orchestrator: ConnectorOrchestratorService,
+    private readonly configCrypto: ConnectorConfigCryptoService,
   ) {}
 
   @Cron(CronExpression.EVERY_MINUTE)
@@ -29,7 +30,7 @@ export class ConnectorSchedulerService {
       const enabled = await this.instances.find({ where: { enabled: true } });
       const now = Date.now();
       for (const inst of enabled) {
-        const cfg = parseConfigJson(inst.configJson);
+        const cfg = this.configCrypto.decryptConfigJson(inst.configJson);
         const pollMin = Number(cfg.pollIntervalMinutes ?? cfg.poll_interval_minutes ?? 60);
         const intervalMs = Math.max(5, pollMin) * 60 * 1000;
         const last = inst.lastRunAt ? new Date(inst.lastRunAt).getTime() : 0;

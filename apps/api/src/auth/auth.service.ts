@@ -116,6 +116,21 @@ export class AuthService {
     return this.jwt.verify<JwtAccessPayload>(token);
   }
 
+  private lockoutMaxAttempts(): number {
+    const n = parseInt(process.env.AUTH_LOCKOUT_MAX_ATTEMPTS || '5', 10);
+    return Number.isFinite(n) && n > 0 ? n : 5;
+  }
+
+  /** Exponential lock duration after crossing the threshold (attempts >= N). */
+  private computeLockDurationSeconds(attempts: number, threshold: number): number {
+    const base = parseInt(process.env.AUTH_LOCKOUT_BASE_SEC || '60', 10);
+    const maxSec = parseInt(process.env.AUTH_LOCKOUT_MAX_SEC || '900', 10);
+    const b = Number.isFinite(base) && base > 0 ? base : 60;
+    const cap = Number.isFinite(maxSec) && maxSec > 0 ? maxSec : 900;
+    const tier = Math.max(0, attempts - threshold);
+    return Math.min(cap, b * Math.pow(2, tier));
+  }
+
   async validateUser(
     userId: string,
   ): Promise<{ userId: string; email: string; role: string; mustChangePassword: boolean } | null> {
@@ -148,8 +163,16 @@ export class AuthService {
 
   async login(email: string, password: string) {
     const normalized = email.trim().toLowerCase();
+    const threshold = this.lockoutMaxAttempts();
     const user = await this.users.findOne({ where: { email: normalized } });
-    if (!user || !user.isActive) {
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+    const now = new Date();
+    if (user.lockedUntil && user.lockedUntil > now) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+    if (!user.isActive) {
       throw new UnauthorizedException('Invalid credentials');
     }
     if (user.authProvider && user.authProvider !== 'local') {
@@ -157,11 +180,20 @@ export class AuthService {
     }
     const ok = await this.verifyPassword(password, user.passwordHash);
     if (!ok) {
+      const prev = user.failedLoginAttempts ?? 0;
+      user.failedLoginAttempts = prev + 1;
+      if (user.failedLoginAttempts >= threshold) {
+        const sec = this.computeLockDurationSeconds(user.failedLoginAttempts, threshold);
+        user.lockedUntil = new Date(now.getTime() + sec * 1000);
+      }
+      await this.users.save(user);
       throw new UnauthorizedException('Invalid credentials');
     }
     if (user.passwordHash === LEGACY_DISABLED_PASSWORD_PLACEHOLDER) {
       throw new UnauthorizedException('Set a real password for this account');
     }
+    user.failedLoginAttempts = 0;
+    user.lockedUntil = null;
     user.lastLoginAt = new Date();
     await this.users.save(user);
     const token = this.signAccessToken(user);

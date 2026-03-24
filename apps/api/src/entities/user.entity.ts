@@ -36,6 +36,12 @@ export class User {
   @Column({ name: 'last_login_at', type: datetimeColumnType, nullable: true })
   lastLoginAt: Date | null;
 
+  @Column({ name: 'failed_login_attempts', type: 'int', default: 0 })
+  failedLoginAttempts: number;
+
+  @Column({ name: 'locked_until', type: datetimeColumnType, nullable: true })
+  lockedUntil: Date | null;
+
   /** True until the user sets a new password after initial env-based admin login. */
   @Column({ name: 'must_change_password', type: 'boolean', default: false })
   mustChangePassword: boolean;
