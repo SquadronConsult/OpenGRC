@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 import { readFile } from 'fs/promises';
+import { loginBearer } from './login-bearer.mjs';
 
 const API_URL = process.env.API_URL || 'http://localhost:3000';
 const INPUT = process.argv[2];
@@ -38,8 +39,11 @@ async function run() {
   const raw = await readFile(INPUT, 'utf-8');
   const src = JSON.parse(raw);
 
+  const token = await loginBearer(API_URL);
+  const bearer = { authorization: `Bearer ${token}` };
   const authJson = {
     'content-type': 'application/json',
+    ...bearer,
   };
 
   const project = await call('/projects', {
@@ -60,7 +64,7 @@ async function run() {
   });
 
   const checklist = await call(`/projects/${project.id}/checklist`, {
-    headers: {},
+    headers: bearer,
   });
 
   const byKey = new Map();

@@ -1,8 +1,34 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { API, api, getToken } from '@/lib/api';
+import { toast } from 'sonner';
+import {
+  ChevronLeft,
+  Download,
+  AlertTriangle,
+  Clock,
+  FileText,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { api, getApiBase, getToken } from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { DeadlineChip } from '@/components/compliance/DeadlineChip';
+import { EmptyState } from '@/components/compliance/EmptyState';
 
 type PoamRow = {
   poamId: string;
@@ -42,12 +68,28 @@ type PoamResponse = {
   rows: PoamRow[];
 };
 
-export default function ProjectPoamPage({ params }: { params: { id: string } }) {
+function riskBadge(rating: string) {
+  if (rating === 'High') return <Badge variant="destructive">{rating}</Badge>;
+  if (rating === 'Moderate') return <Badge variant="secondary">{rating}</Badge>;
+  return <Badge variant="outline">{rating}</Badge>;
+}
+
+const sevBarClass = (s: string) =>
+  s === 'High'
+    ? 'bg-destructive'
+    : s === 'Moderate'
+      ? 'bg-warning'
+      : 'bg-success';
+
+export default function ProjectPoamPage({
+  params,
+}: {
+  params: { id: string };
+}) {
   const { id } = params;
+  const router = useRouter();
   const [data, setData] = useState<PoamResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [msg, setMsg] = useState('');
-  const [msgType, setMsgType] = useState<'info' | 'success' | 'error'>('info');
 
   async function load() {
     setLoading(true);
@@ -55,8 +97,7 @@ export default function ProjectPoamPage({ params }: { params: { id: string } }) 
       const res = await api<PoamResponse>(`/projects/${id}/poam`);
       setData(res);
     } catch (e: unknown) {
-      setMsg(e instanceof Error ? e.message : 'Failed to load POA&M');
-      setMsgType('error');
+      toast.error(e instanceof Error ? e.message : 'Failed to load POA&M');
     } finally {
       setLoading(false);
     }
@@ -64,6 +105,7 @@ export default function ProjectPoamPage({ params }: { params: { id: string } }) 
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const summary = useMemo(() => {
@@ -85,8 +127,8 @@ export default function ProjectPoamPage({ params }: { params: { id: string } }) 
         const milestone = row.plannedMilestoneDate
           ? new Date(`${row.plannedMilestoneDate}T00:00:00`)
           : completion
-          ? new Date(completion.getTime() - 14 * 24 * 60 * 60 * 1000)
-          : null;
+            ? new Date(completion.getTime() - 14 * 24 * 60 * 60 * 1000)
+            : null;
         if (!milestone && !completion) return null;
         const start = milestone || completion;
         const end = completion || milestone;
@@ -101,12 +143,22 @@ export default function ProjectPoamPage({ params }: { params: { id: string } }) 
 
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    const min = new Date(Math.min(...visibleRows.map((r) => r.start.getTime()), now.getTime()));
-    const max = new Date(Math.max(...visibleRows.map((r) => r.end.getTime()), now.getTime()));
-    const totalDays = Math.max(1, Math.ceil((max.getTime() - min.getTime()) / (24 * 60 * 60 * 1000)));
+    const min = new Date(
+      Math.min(...visibleRows.map((r) => r.start.getTime()), now.getTime()),
+    );
+    const max = new Date(
+      Math.max(...visibleRows.map((r) => r.end.getTime()), now.getTime()),
+    );
+    const totalDays = Math.max(
+      1,
+      Math.ceil((max.getTime() - min.getTime()) / (24 * 60 * 60 * 1000)),
+    );
 
     function pct(date: Date) {
-      return ((date.getTime() - min.getTime()) / (24 * 60 * 60 * 1000) / totalDays) * 100;
+      return (
+        ((date.getTime() - min.getTime()) / (24 * 60 * 60 * 1000) / totalDays) *
+        100
+      );
     }
 
     return {
@@ -126,10 +178,14 @@ export default function ProjectPoamPage({ params }: { params: { id: string } }) 
   async function exportPoam(format: 'csv' | 'md' | 'json') {
     try {
       const token = getToken();
-      const res = await fetch(`${API}/projects/${id}/poam?format=${format}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res.ok) throw new Error(await res.text() || 'Export failed');
+      const res = await fetch(
+        `${getApiBase()}/projects/${id}/poam?format=${format}`,
+        {
+          credentials: 'include',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        },
+      );
+      if (!res.ok) throw new Error((await res.text()) || 'Export failed');
 
       const extension = format === 'md' ? 'md' : format;
       const content = await res.text();
@@ -138,185 +194,316 @@ export default function ProjectPoamPage({ params }: { params: { id: string } }) 
       a.href = URL.createObjectURL(blob);
       a.download = `poam-${id}.${extension}`;
       a.click();
-      setMsg(`Exported as ${extension.toUpperCase()}`);
-      setMsgType('success');
+      toast.success(`Exported as ${extension.toUpperCase()}`);
     } catch (e: unknown) {
-      setMsg(e instanceof Error ? e.message : 'Export failed');
-      setMsgType('error');
+      toast.error(e instanceof Error ? e.message : 'Export failed');
     }
   }
 
-  const sevColor = (s: string) => s === 'High' ? 'var(--danger)' : s === 'Moderate' ? 'var(--warn)' : 'var(--success)';
+  const tabRoutes: Record<string, string> = {
+    checklist: `/projects/${id}`,
+    'auto-scope': `/projects/${id}/auto-scope`,
+    poam: `/projects/${id}/poam`,
+    risk: `/projects/${id}/risk`,
+  };
 
   return (
-    <div className="animate-in">
-      <div style={{ marginBottom: '1rem' }}>
-        <Link href={`/projects/${id}`} className="btn-ghost" style={{ textDecoration: 'none', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-            Projects
-          </span>
-        </Link>
-      </div>
+    <div className="animate-in fade-in duration-300 space-y-6">
+      {/* Back link */}
+      <Link
+        href={`/projects/${id}`}
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+      >
+        <ChevronLeft className="size-4" />
+        Projects
+      </Link>
 
-      <div className="page-header">
+      {/* Page header */}
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h1>Plan of Action &amp; Milestones</h1>
-          <p className="text-sm text-muted" style={{ marginTop: '0.25rem' }}>
-            Auto-generated from open checklist weaknesses. Export for government handoff.
+          <h1 className="text-2xl font-bold tracking-tight">
+            Plan of Action &amp; Milestones
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Auto-generated from open checklist weaknesses. Export for government
+            handoff.
           </p>
         </div>
-        <div className="btn-group">
-          <button className="btn btn-secondary" onClick={() => exportPoam('csv')}>CSV</button>
-          <button className="btn btn-secondary" onClick={() => exportPoam('md')}>Markdown</button>
-          <button className="btn btn-secondary" onClick={() => exportPoam('json')}>JSON</button>
+        <div className="flex shrink-0 gap-2">
+          <Button variant="outline" size="sm" onClick={() => exportPoam('csv')}>
+            <Download className="size-3.5" />
+            CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => exportPoam('md')}>
+            <FileText className="size-3.5" />
+            Markdown
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => exportPoam('json')}
+          >
+            <Download className="size-3.5" />
+            JSON
+          </Button>
         </div>
       </div>
 
-      <div className="tab-bar">
-        <Link href={`/projects/${id}`} className="tab-item" style={{ textDecoration: 'none' }}>Checklist</Link>
-        <Link href={`/projects/${id}/auto-scope`} className="tab-item" style={{ textDecoration: 'none' }}>Auto-Scope</Link>
-        <Link href={`/projects/${id}/poam`} className="tab-item active" style={{ textDecoration: 'none' }}>POA&amp;M</Link>
-      </div>
+      {/* Tab bar */}
+      <Tabs
+        value="poam"
+        onValueChange={(val) => {
+          const dest = tabRoutes[val];
+          if (dest) router.push(dest);
+        }}
+      >
+        <TabsList>
+          <TabsTrigger value="checklist">Checklist</TabsTrigger>
+          <TabsTrigger value="auto-scope">Auto-Scope</TabsTrigger>
+          <TabsTrigger value="poam">POA&amp;M</TabsTrigger>
+          <TabsTrigger value="risk">Risk</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
-      {msg && <div className={`alert alert-${msgType}`}>{msg}</div>}
-
-      {data && (
-        <div className="stats-row">
-          <div className="stat-card">
-            <div className="stat-value">{summary.total}</div>
-            <div className="stat-label">Total Items</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-value" style={{ color: 'var(--danger)' }}>{summary.high}</div>
-            <div className="stat-label">High</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-value" style={{ color: 'var(--warn)' }}>{summary.moderate}</div>
-            <div className="stat-label">Moderate</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-value" style={{ color: 'var(--success)' }}>{summary.low}</div>
-            <div className="stat-label">Low</div>
-          </div>
-        </div>
-      )}
-
-      {gantt && (
-        <div className="card" style={{ marginBottom: '1.25rem' }}>
-          <div className="card-header">
-            <h3 style={{ marginBottom: 0 }}>Timeline</h3>
-            <div className="gap-row" style={{ gap: '0.4rem' }}>
-              <span className="badge badge-red">High</span>
-              <span className="badge badge-yellow">Moderate</span>
-              <span className="badge badge-green">Low</span>
-            </div>
-          </div>
-
-          <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden', background: 'var(--bg)' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', padding: '0.55rem 0.75rem', background: 'var(--surface-raised)', borderBottom: '1px solid var(--border)', fontSize: '0.68rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
-              <div>Weakness</div>
-              <div style={{ position: 'relative' }}>
-                <span>{gantt.min.toISOString().slice(0, 10)}</span>
-                <span style={{ position: 'absolute', right: 0, top: 0 }}>{gantt.max.toISOString().slice(0, 10)}</span>
-              </div>
-            </div>
-
-            {gantt.rows.map((row) => (
-              <div key={row.poamId} style={{ display: 'grid', gridTemplateColumns: '220px 1fr', alignItems: 'center', padding: '0.4rem 0.75rem', borderBottom: '1px solid var(--border)' }}>
-                <div style={{ minWidth: 0 }}>
-                  <div className="truncate" style={{ fontWeight: 600, fontSize: '0.76rem', color: 'var(--text)' }}>
-                    {row.poamId} &middot; {row.weaknessSourceIdentifier}
-                  </div>
-                  <div className="truncate text-xs text-muted">{row.weaknessName}</div>
-                </div>
-                <div style={{ position: 'relative', height: 18, borderRadius: 999, background: 'rgba(148,163,184,0.08)', overflow: 'hidden' }}>
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: `${row.leftPct}%`,
-                      width: `${row.widthPct}%`,
-                      top: 3,
-                      bottom: 3,
-                      borderRadius: 999,
-                      background: sevColor(row.adjustedRiskRating),
-                      opacity: 0.85,
-                    }}
-                    title={`${row.plannedMilestoneDate || '?'} → ${row.scheduledCompletionDate || '?'}`}
-                  />
-                  <div style={{ position: 'absolute', left: `${gantt.nowPct}%`, top: 0, bottom: 0, width: 2, background: 'var(--accent)', opacity: 0.9 }} />
-                </div>
-              </div>
+      {/* Loading skeletons */}
+      {loading && (
+        <>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i} className="py-0">
+                <CardContent className="flex flex-col items-center gap-1 py-4">
+                  <Skeleton className="h-8 w-12" />
+                  <Skeleton className="mt-1 h-3 w-16" />
+                </CardContent>
+              </Card>
             ))}
           </div>
+          <Card className="py-0">
+            <CardContent className="space-y-3 py-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-6 w-full" />
+              ))}
+            </CardContent>
+          </Card>
+          <div className="space-y-2">
+            <Skeleton className="h-10 w-full" />
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+        </>
+      )}
 
-          {gantt.hiddenCount > 0 && (
-            <div className="text-xs text-dim mt-1">
-              Showing top 40 by nearest completion ({gantt.hiddenCount} more below).
-            </div>
-          )}
+      {/* Summary stats */}
+      {!loading && data && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <Card className="py-0">
+            <CardContent className="flex flex-col items-center gap-1 py-4">
+              <span className="text-2xl font-bold">{summary.total}</span>
+              <span className="text-xs text-muted-foreground">Total Items</span>
+            </CardContent>
+          </Card>
+          <Card className="py-0">
+            <CardContent className="flex flex-col items-center gap-1 py-4">
+              <span className="text-2xl font-bold text-destructive">
+                {summary.high}
+              </span>
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <AlertTriangle className="size-3" aria-hidden="true" />
+                High
+              </span>
+            </CardContent>
+          </Card>
+          <Card className="py-0">
+            <CardContent className="flex flex-col items-center gap-1 py-4">
+              <span className="text-2xl font-bold text-warning">
+                {summary.moderate}
+              </span>
+              <span className="text-xs text-muted-foreground">Moderate</span>
+            </CardContent>
+          </Card>
+          <Card className="py-0">
+            <CardContent className="flex flex-col items-center gap-1 py-4">
+              <span className="text-2xl font-bold text-success">
+                {summary.low}
+              </span>
+              <span className="text-xs text-muted-foreground">Low</span>
+            </CardContent>
+          </Card>
         </div>
       )}
 
-      {loading ? (
-        <div className="empty-state"><p>Loading POA&amp;M...</p></div>
-      ) : !data || data.rows.length === 0 ? (
-        <div className="empty-state"><p>No POA&amp;M items. Items appear for non-compliant or incomplete controls.</p></div>
-      ) : (
-        <>
-          <div className="text-xs text-dim" style={{ marginBottom: '0.5rem' }}>
-            FedRAMP-style Open POA&amp;M view (RA/FP/OR/VD columns included for reviewer workflow).
-          </div>
-          <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th style={{ width: 100 }}>ID</th>
-                <th style={{ width: 165 }}>Weakness Source ID</th>
-                <th style={{ width: 200 }}>Weakness Name</th>
-                <th style={{ width: 160 }}>Detector Source</th>
-                <th style={{ width: 105 }}>Orig Risk</th>
-                <th style={{ width: 105 }}>Adj Risk</th>
-                <th style={{ width: 70 }}>RA</th>
-                <th style={{ width: 70 }}>FP</th>
-                <th style={{ width: 70 }}>OR</th>
-                <th style={{ width: 70 }}>VD</th>
-                <th style={{ width: 110 }}>Status</th>
-                <th style={{ width: 120 }}>Discovery</th>
-                <th style={{ width: 120 }}>Milestone</th>
-                <th style={{ width: 120 }}>Completion</th>
-                <th style={{ width: 160 }}>Evidence References</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.rows.map((row) => (
-                <tr key={row.poamId}>
-                  <td style={{ fontWeight: 600, color: 'var(--text)' }}>{row.poamId}</td>
-                  <td><span className="badge badge-blue">{row.weaknessSourceIdentifier}</span></td>
-                  <td>
-                    <div style={{ fontWeight: 500, color: 'var(--text)', marginBottom: '0.15rem', fontSize: '0.82rem' }}>{row.weaknessName}</div>
-                  </td>
-                  <td className="text-xs text-dim">{row.weaknessDetectorSource}</td>
-                  <td><span className={`badge ${row.originalRiskRating === 'High' ? 'badge-red' : row.originalRiskRating === 'Moderate' ? 'badge-yellow' : 'badge-green'}`}>{row.originalRiskRating}</span></td>
-                  <td><span className={`badge ${row.adjustedRiskRating === 'High' ? 'badge-red' : row.adjustedRiskRating === 'Moderate' ? 'badge-yellow' : 'badge-green'}`}>{row.adjustedRiskRating}</span></td>
-                  <td className="text-sm">{row.riskAdjustment}</td>
-                  <td className="text-sm">{row.falsePositive}</td>
-                  <td className="text-sm">{row.operationalRequirement}</td>
-                  <td className="text-sm">{row.vendorDependency}</td>
-                  <td className="text-sm">{row.status}</td>
-                  <td className="text-sm text-dim">{row.discoveryDate || '\u2014'}</td>
-                  <td className="text-sm text-dim">{row.plannedMilestoneDate || '\u2014'}</td>
-                  <td className="text-sm text-dim">{row.scheduledCompletionDate || '\u2014'}</td>
-                  <td className="text-xs text-dim">
-                    {row.evidenceReferences?.length ? row.evidenceReferences.join(', ') : '\u2014'}
-                  </td>
-                </tr>
+      {/* Gantt timeline */}
+      {!loading && gantt && (
+        <Card className="py-0">
+          <CardHeader className="flex-row items-center justify-between border-b py-3">
+            <CardTitle className="inline-flex items-center gap-2 text-base">
+              <Clock className="size-4 text-muted-foreground" />
+              Timeline
+            </CardTitle>
+            <div className="flex items-center gap-1.5">
+              <Badge variant="destructive">High</Badge>
+              <Badge variant="secondary">Moderate</Badge>
+              <Badge variant="outline">Low</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-hidden rounded-b-xl bg-background" role="img" aria-label="POA&amp;M timeline showing weakness remediation schedule">
+              {/* Header row */}
+              <div className="grid grid-cols-[220px_1fr] border-b bg-muted/50 px-3 py-2 text-[0.68rem] font-bold uppercase tracking-wider text-muted-foreground">
+                <div>Weakness</div>
+                <div className="relative">
+                  <span>{gantt.min.toISOString().slice(0, 10)}</span>
+                  <span className="absolute right-0 top-0">
+                    {gantt.max.toISOString().slice(0, 10)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Data rows */}
+              {gantt.rows.map((row) => (
+                <div
+                  key={row.poamId}
+                  className="grid grid-cols-[220px_1fr] items-center border-b px-3 py-1.5 last:border-b-0"
+                >
+                  <div className="min-w-0">
+                    <div className="truncate text-xs font-semibold text-foreground">
+                      {row.poamId} &middot; {row.weaknessSourceIdentifier}
+                    </div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {row.weaknessName}
+                    </div>
+                  </div>
+                  <div className="relative h-[18px] overflow-hidden rounded-full bg-muted/30">
+                    <div
+                      className={cn(
+                        'absolute top-[3px] bottom-[3px] rounded-full opacity-85',
+                        sevBarClass(row.adjustedRiskRating),
+                      )}
+                      style={{
+                        left: `${row.leftPct}%`,
+                        width: `${row.widthPct}%`,
+                      }}
+                      title={`${row.plannedMilestoneDate || '?'} → ${row.scheduledCompletionDate || '?'}`}
+                    />
+                    <div
+                      className="absolute top-0 bottom-0 w-0.5 bg-primary opacity-90"
+                      style={{ left: `${gantt.nowPct}%` }}
+                    />
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </div>
+
+            {gantt.hiddenCount > 0 && (
+              <p className="px-3 py-2 text-xs text-muted-foreground">
+                Showing top 40 by nearest completion ({gantt.hiddenCount} more
+                below).
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Empty state */}
+      {!loading && (!data || data.rows.length === 0) && (
+        <EmptyState
+          icon={FileText}
+          title="No POA&M items"
+          description="Items appear for non-compliant or incomplete controls."
+        />
+      )}
+
+      {/* POA&M table */}
+      {!loading && data && data.rows.length > 0 && (
+        <>
+          <p className="text-xs text-muted-foreground">
+            FedRAMP-style Open POA&amp;M view (RA/FP/OR/VD columns included for
+            reviewer workflow).
+          </p>
+          <ScrollArea className="w-full">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[100px]">ID</TableHead>
+                  <TableHead className="w-[165px]">
+                    Weakness Source ID
+                  </TableHead>
+                  <TableHead className="w-[200px]">Weakness Name</TableHead>
+                  <TableHead className="w-[160px]">Detector Source</TableHead>
+                  <TableHead className="w-[105px]">Orig Risk</TableHead>
+                  <TableHead className="w-[105px]">Adj Risk</TableHead>
+                  <TableHead className="w-[70px]">RA</TableHead>
+                  <TableHead className="w-[70px]">FP</TableHead>
+                  <TableHead className="w-[70px]">OR</TableHead>
+                  <TableHead className="w-[70px]">VD</TableHead>
+                  <TableHead className="w-[110px]">Status</TableHead>
+                  <TableHead className="w-[120px]">Discovery</TableHead>
+                  <TableHead className="w-[120px]">Milestone</TableHead>
+                  <TableHead className="w-[120px]">Completion</TableHead>
+                  <TableHead className="w-[160px]">
+                    Evidence References
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.rows.map((row) => (
+                  <TableRow key={row.poamId}>
+                    <TableCell className="font-semibold">
+                      {row.poamId}
+                    </TableCell>
+                    <TableCell>
+                      <Badge>{row.weaknessSourceIdentifier}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm font-medium">
+                        {row.weaknessName}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {row.weaknessDetectorSource}
+                    </TableCell>
+                    <TableCell>{riskBadge(row.originalRiskRating)}</TableCell>
+                    <TableCell>{riskBadge(row.adjustedRiskRating)}</TableCell>
+                    <TableCell className="text-sm">
+                      {row.riskAdjustment}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {row.falsePositive}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {row.operationalRequirement}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {row.vendorDependency}
+                    </TableCell>
+                    <TableCell className="text-sm">{row.status}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {row.discoveryDate || '\u2014'}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {row.plannedMilestoneDate || '\u2014'}
+                    </TableCell>
+                    <TableCell>
+                      {row.scheduledCompletionDate ? (
+                        <DeadlineChip dueDate={row.scheduledCompletionDate} />
+                      ) : (
+                        <span className="text-sm text-muted-foreground">
+                          {'\u2014'}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {row.evidenceReferences?.length
+                        ? row.evidenceReferences.join(', ')
+                        : '\u2014'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
         </>
       )}
     </div>

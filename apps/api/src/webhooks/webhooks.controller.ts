@@ -5,15 +5,22 @@ import {
   ForbiddenException,
   Get,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { WebhooksService } from './webhooks.service';
 import { ProjectsService } from '../projects/projects.service';
+import { PageLimitQueryDto } from '../common/dto/page-limit-query.dto';
+import { skipTakeFromPageLimit } from '../common/dto/page-limit-query.dto';
+import { toPaginated } from '../common/pagination/paginated-result';
 
+@ApiTags('webhooks')
 @Controller('webhooks')
 @UseGuards(JwtAuthGuard)
+@ApiBearerAuth('bearer')
 export class WebhooksController {
   constructor(
     private readonly svc: WebhooksService,
@@ -21,12 +28,19 @@ export class WebhooksController {
   ) {}
 
   @Get()
-  list(@Req() req: { user: { role: string } }) {
-    if (req.user.role !== 'admin') return [];
-    return this.svc.list();
+  list(
+    @Req() req: { user: { role: string } },
+    @Query() q: PageLimitQueryDto,
+  ) {
+    const paging = skipTakeFromPageLimit(q);
+    if (req.user.role !== 'admin') {
+      return toPaginated([], paging.page, paging.limit, 0);
+    }
+    return this.svc.listPaginated(undefined, paging);
   }
 
   @Post()
+  @ApiOperation({ summary: 'Create webhook subscription' })
   async create(
     @Req() req: { user: { userId: string; role: string } },
     @Body() b: { url: string; secret?: string; events: string[]; projectId?: string },

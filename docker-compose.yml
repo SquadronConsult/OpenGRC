@@ -11,6 +11,9 @@ services:
       LOCAL_DATA_DIR: /app/local-data
       DB_SYNC: "true"
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@localhost}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-dev-local-change-me-in-docker}
+      BOOTSTRAP_TOKEN: ${BOOTSTRAP_TOKEN:-}
       FRMR_AUTO_INGEST: "true"
       FRMR_PREFER_LOCAL: "true"
       FRMR_OFFLINE_PATH: /app/local-data/FRMR.documentation.json

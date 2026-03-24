@@ -276,6 +276,11 @@ export async function getFrmrTaxonomy(payload = {}) {
   );
 }
 
+/** Generic catalog: registered frameworks (fedramp_frmr, nist_csf_2, …). */
+export async function getCatalogFrameworks() {
+  return getJson('/catalog/frameworks', { auth: false });
+}
+
 export async function exportProjectV1(payload) {
   if (!payload?.projectId) throw new Error('projectId is required');
   const projectId = encodeURIComponent(payload.projectId);
@@ -294,6 +299,54 @@ export async function exportPoamV1(payload) {
       format: payload.format || 'json',
     })}`,
   );
+}
+
+const projectConnectorsBase = (projectId) =>
+  `/integrations/v1/projects/${encodeURIComponent(projectId)}/connectors`;
+
+export async function connectorsListV1(payload) {
+  if (!payload?.projectId) throw new Error('projectId is required');
+  return getJson(`${projectConnectorsBase(payload.projectId)}`);
+}
+
+export async function connectorsRegistryV1(payload) {
+  if (!payload?.projectId) throw new Error('projectId is required');
+  return getJson(`${projectConnectorsBase(payload.projectId)}/registry`);
+}
+
+export async function connectorsStatusV1(payload) {
+  if (!payload?.projectId) throw new Error('projectId is required');
+  return getJson(`${projectConnectorsBase(payload.projectId)}/status/summary`);
+}
+
+export async function connectorsRunV1(payload) {
+  if (!payload?.projectId) throw new Error('projectId is required');
+  if (!payload?.instanceId) throw new Error('instanceId is required');
+  return postJson(
+    `${projectConnectorsBase(payload.projectId)}/${encodeURIComponent(payload.instanceId)}/run`,
+    {},
+  );
+}
+
+export async function connectorsRunsV1(payload) {
+  if (!payload?.projectId) throw new Error('projectId is required');
+  if (!payload?.instanceId) throw new Error('instanceId is required');
+  const q = buildQuery({ limit: payload.limit });
+  return getJson(
+    `${projectConnectorsBase(payload.projectId)}/${encodeURIComponent(payload.instanceId)}/runs${q}`,
+  );
+}
+
+export async function connectorsCreateV1(payload) {
+  if (!payload?.projectId) throw new Error('projectId is required');
+  if (!payload?.connectorId) throw new Error('connectorId is required');
+  if (!payload?.label) throw new Error('label is required');
+  return postJson(`${projectConnectorsBase(payload.projectId)}`, {
+    connectorId: payload.connectorId,
+    label: payload.label,
+    enabled: payload.enabled !== false,
+    config: payload.config || {},
+  });
 }
 
 export async function fedrampOscalReportV1(payload) {

@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Project } from '../entities/project.entity';
 import { ChecklistItem } from '../entities/checklist-item.entity';
+import { PoamEntry } from '../entities/poam-entry.entity';
 
 type PoamRisk = 'Low' | 'Moderate' | 'High';
 
@@ -37,6 +38,7 @@ export class ExportService {
   constructor(
     @InjectRepository(Project) private readonly proj: Repository<Project>,
     @InjectRepository(ChecklistItem) private readonly items: Repository<ChecklistItem>,
+    @InjectRepository(PoamEntry) private readonly poamRepo: Repository<PoamEntry>,
   ) {}
 
   async exportJson(projectId: string) {
@@ -44,7 +46,14 @@ export class ExportService {
     if (!project) throw new NotFoundException();
     const list = await this.items.find({
       where: { projectId },
-      relations: ['frrRequirement', 'ksiIndicator', 'evidence'],
+      relations: [
+        'frrRequirement',
+        'ksiIndicator',
+        'evidence',
+        'catalogRequirement',
+        'catalogRequirement.frameworkRelease',
+        'catalogRequirement.frameworkRelease.framework',
+      ],
     });
     return {
       project: {
@@ -81,11 +90,33 @@ export class ExportService {
               controls: i.ksiIndicator.controls,
             }
           : null,
-        evidence: i.evidence?.map((e) => ({
-          filename: e.filename,
-          externalUri: e.externalUri,
-          checksum: e.checksum,
-        })),
+        catalog: i.catalogRequirement
+          ? {
+              frameworkCode:
+                i.catalogRequirement.frameworkRelease?.framework?.code ?? null,
+              releaseCode: i.catalogRequirement.frameworkRelease?.releaseCode ?? null,
+              requirementCode: i.catalogRequirement.requirementCode,
+              kind: i.catalogRequirement.kind,
+              statement: i.catalogRequirement.statement,
+            }
+          : null,
+        evidence: i.evidence?.map((e) => {
+          const meta = e.metadata as Record<string, unknown> | null | undefined;
+          const automated = meta?.automated === true;
+          return {
+            filename: e.filename,
+            externalUri: e.externalUri,
+            checksum: e.checksum,
+            metadata: meta ?? null,
+            sourceConnector: e.sourceConnector,
+            sourceSystem: e.sourceSystem,
+            artifactType: e.artifactType,
+            collectionStart: e.collectionStart,
+            collectionEnd: e.collectionEnd,
+            createdAt: e.createdAt,
+            evidenceOrigin: automated ? 'automated' : 'manual',
+          };
+        }),
       })),
     };
   }
@@ -103,6 +134,14 @@ export class ExportService {
       if (row.applicability?.decision) {
         md += `**Applicability:** ${row.applicability.decision} (${Math.round(((row.applicability.confidence as number) || 0) * 100)}% confidence)\n`;
       }
+      if (row.evidence?.length) {
+        const auto = row.evidence.filter((e) => {
+          const m = e.metadata as { automated?: boolean } | null | undefined;
+          return m?.automated === true;
+        });
+        const manual = row.evidence.length - auto.length;
+        md += `**Evidence:** ${row.evidence.length} artifact(s) — ${manual} manual, ${auto.length} automated\n`;
+      }
       if (row.ksi?.controls?.length)
         md += `**NIST 800-53:** ${row.ksi.controls.join(', ')}\n`;
       md += '\n';
@@ -113,11 +152,18 @@ export class ExportService {
   async exportPoamJson(projectId: string) {
     const project = await this.proj.findOne({ where: { id: projectId } });
     if (!project) throw new NotFoundException();
+    const stored = await this.poamRepo.find({
+      where: { projectId },
+      order: { createdAt: 'ASC' },
+    });
     const list = await this.items.find({
       where: { projectId },
       relations: ['frrRequirement', 'ksiIndicator', 'evidence'],
     });
-    const rows = this.buildPoamRows(list, project.impactLevel);
+    const rows =
+      stored.length > 0
+        ? stored.map((s) => s.rowData as FedrampPoamRow)
+        : this.buildPoamRows(list, project.impactLevel);
     return {
       project: {
         id: project.id,
@@ -128,8 +174,32 @@ export class ExportService {
       generatedAt: new Date().toISOString(),
       totalRows: rows.length,
       format: 'fedramp-poam-open',
+      poamSource: stored.length > 0 ? 'stored' : 'derived',
       rows,
     };
+  }
+
+  /** Ordered POA&M rows derived from current checklist (non-compliant items). */
+  async derivePoamRowSources(projectId: string): Promise<
+    { checklistItemId: string; row: FedrampPoamRow }[]
+  > {
+    const project = await this.proj.findOne({ where: { id: projectId } });
+    if (!project) throw new NotFoundException();
+    const list = await this.items.find({
+      where: { projectId },
+      relations: ['frrRequirement', 'ksiIndicator', 'evidence'],
+    });
+    const filtered = list
+      .filter((i) => i.status !== 'compliant')
+      .sort((a, b) => {
+        const ad = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+        const bd = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+        return ad - bd;
+      });
+    return filtered.map((i, idx) => ({
+      checklistItemId: i.id,
+      row: this.buildSinglePoamRow(i, idx, project.impactLevel),
+    }));
   }
 
   async exportOscalSspJson(projectId: string) {
@@ -370,8 +440,6 @@ export class ExportService {
     list: ChecklistItem[],
     impactLevel: 'low' | 'moderate' | 'high',
   ) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     const filtered = list
       .filter((i) => i.status !== 'compliant')
       .sort((a, b) => {
@@ -379,57 +447,64 @@ export class ExportService {
         const bd = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
         return ad - bd;
       });
+    return filtered.map((i, idx) => this.buildSinglePoamRow(i, idx, impactLevel));
+  }
 
-    return filtered.map((i, idx) => {
-      const controlId = i.frrRequirement
-        ? `${i.frrRequirement.processId}-${i.frrRequirement.reqKey}`
-        : i.ksiIndicator?.indicatorId || i.id;
-      const weaknessDescription =
-        i.frrRequirement?.statement || i.ksiIndicator?.statement || 'Control gap requiring remediation.';
-      const weaknessName = i.frrRequirement
-        ? `${i.frrRequirement.primaryKeyWord || 'Control'} implementation gap`
-        : 'KSI implementation gap';
-      const severity = this.poamSeverity(i.status, i.dueDate, impactLevel);
-      const milestoneDate = this.shiftDate(i.dueDate, -14);
-      const completionDate = i.dueDate ? new Date(i.dueDate).toISOString().slice(0, 10) : null;
-      const discoveryDate = this.estimateDiscoveryDate(completionDate, severity);
-      const evidenceReferences = (i.evidence || [])
-        .map((e) => e.externalUri || e.filename || '')
-        .filter(Boolean);
-      const resourcesAffected = i.frrRequirement
-        ? `Process ${i.frrRequirement.processId} requirement ${i.frrRequirement.reqKey}`
-        : `KSI ${i.ksiIndicator?.indicatorId || i.id}`;
-      const detectorSource = i.frrRequirement
-        ? 'FRR assessment / control implementation review'
-        : 'KSI assessment / control implementation review';
+  private buildSinglePoamRow(
+    i: ChecklistItem,
+    idx: number,
+    impactLevel: 'low' | 'moderate' | 'high',
+  ): FedrampPoamRow {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const controlId = i.frrRequirement
+      ? `${i.frrRequirement.processId}-${i.frrRequirement.reqKey}`
+      : i.ksiIndicator?.indicatorId || i.id;
+    const weaknessDescription =
+      i.frrRequirement?.statement || i.ksiIndicator?.statement || 'Control gap requiring remediation.';
+    const weaknessName = i.frrRequirement
+      ? `${i.frrRequirement.primaryKeyWord || 'Control'} implementation gap`
+      : 'KSI implementation gap';
+    const severity = this.poamSeverity(i.status, i.dueDate, impactLevel);
+    const milestoneDate = this.shiftDate(i.dueDate, -14);
+    const completionDate = i.dueDate ? new Date(i.dueDate).toISOString().slice(0, 10) : null;
+    const discoveryDate = this.estimateDiscoveryDate(completionDate, severity);
+    const evidenceReferences = (i.evidence || [])
+      .map((e) => e.externalUri || e.filename || '')
+      .filter(Boolean);
+    const resourcesAffected = i.frrRequirement
+      ? `Process ${i.frrRequirement.processId} requirement ${i.frrRequirement.reqKey}`
+      : `KSI ${i.ksiIndicator?.indicatorId || i.id}`;
+    const detectorSource = i.frrRequirement
+      ? 'FRR assessment / control implementation review'
+      : 'KSI assessment / control implementation review';
 
-      return {
-        poamId: `POAM-${String(idx + 1).padStart(4, '0')}`,
-        weaknessName,
-        weaknessDescription,
-        weaknessDetectorSource: detectorSource,
-        weaknessSourceIdentifier: controlId,
-        resourcesAffected,
-        originalRiskRating: severity,
-        adjustedRiskRating: severity,
-        riskAdjustment: 'No',
-        falsePositive: 'No',
-        operationalRequirement: 'No',
-        vendorDependency: 'No',
-        lastVendorCheckinDate: null,
-        vendorDependentProductName: null,
-        status: i.status,
-        discoveryDate,
-        statusDate: today.toISOString().slice(0, 10),
-        plannedMilestone: 'Implement control, validate evidence, and re-test effectiveness.',
-        plannedMilestoneDate: milestoneDate,
-        scheduledCompletionDate: completionDate,
-        comments:
-          'Generated by OpenGRC from checklist state. Update RA/FP/OR/VD fields and comments during formal review.',
-        evidenceReferences,
-        source: i.frrRequirement ? 'FRR' : 'KSI',
-      };
-    });
+    return {
+      poamId: `POAM-${String(idx + 1).padStart(4, '0')}`,
+      weaknessName,
+      weaknessDescription,
+      weaknessDetectorSource: detectorSource,
+      weaknessSourceIdentifier: controlId,
+      resourcesAffected,
+      originalRiskRating: severity,
+      adjustedRiskRating: severity,
+      riskAdjustment: 'No',
+      falsePositive: 'No',
+      operationalRequirement: 'No',
+      vendorDependency: 'No',
+      lastVendorCheckinDate: null,
+      vendorDependentProductName: null,
+      status: i.status,
+      discoveryDate,
+      statusDate: today.toISOString().slice(0, 10),
+      plannedMilestone: 'Implement control, validate evidence, and re-test effectiveness.',
+      plannedMilestoneDate: milestoneDate,
+      scheduledCompletionDate: completionDate,
+      comments:
+        'Generated by OpenGRC from checklist state. Update RA/FP/OR/VD fields and comments during formal review.',
+      evidenceReferences,
+      source: i.frrRequirement ? 'FRR' : 'KSI',
+    };
   }
 
   private poamSeverity(

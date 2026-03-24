@@ -1,4 +1,6 @@
 /* eslint-disable no-console */
+import { loginBearer } from './login-bearer.mjs';
+
 const API_URL = process.env.API_URL || 'http://localhost:3000';
 
 async function call(path, init = {}) {
@@ -13,7 +15,12 @@ async function call(path, init = {}) {
 }
 
 async function run() {
-  const auth = { 'content-type': 'application/json' };
+  const token = await loginBearer(API_URL);
+  const bearer = { authorization: `Bearer ${token}` };
+  const auth = {
+    'content-type': 'application/json',
+    ...bearer,
+  };
 
   const project = await call('/projects', {
     method: 'POST',
@@ -21,7 +28,7 @@ async function run() {
     body: JSON.stringify({
       name: `Parity Smoke ${Date.now()}`,
       pathType: '20x',
-      impactLevel: 'Moderate',
+      impactLevel: 'moderate',
       actorLabels: 'Cloud Service Provider',
       complianceStartDate: '2026-03-18',
     }),
@@ -34,7 +41,7 @@ async function run() {
   });
 
   const checklist = await call(`/projects/${project.id}/checklist`, {
-    headers: {},
+    headers: bearer,
   });
   if (!Array.isArray(checklist) || checklist.length === 0) {
     throw new Error('Checklist was not generated');
@@ -68,14 +75,40 @@ async function run() {
   });
 
   const exported = await call(`/projects/${project.id}/export?format=md`, {
-    headers: {},
+    headers: bearer,
   });
   if (typeof exported !== 'string' || !exported.includes('# SSP draft')) {
     throw new Error('Export markdown failed validation');
   }
 
+  const risk = await call(`/projects/${project.id}/risks`, {
+    method: 'POST',
+    headers: auth,
+    body: JSON.stringify({
+      title: 'Parity risk',
+      description: 'Smoke risk row',
+      category: 'operational',
+      likelihood: 3,
+      impact: 4,
+      residualLikelihood: 2,
+      residualImpact: 2,
+    }),
+  });
+  if (!risk.id || risk.inherentScore !== 12) {
+    throw new Error('Risk create or scoring failed');
+  }
+  const heatmap = await call(`/projects/${project.id}/risks/heatmap`, { headers: bearer });
+  if (!heatmap.cells || typeof heatmap.total !== 'number') {
+    throw new Error('Risk heatmap failed');
+  }
+  await call(`/projects/${project.id}/risks/${risk.id}/mitigations/checklist-items`, {
+    method: 'POST',
+    headers: auth,
+    body: JSON.stringify({ checklistItemId: firstItemId }),
+  });
+
   console.log(
-    `OK project=${project.id} generated=${generated.created} checklist=${checklist.length} finding=${findings.id}`,
+    `OK project=${project.id} generated=${generated.created} checklist=${checklist.length} finding=${findings.id} risk=${risk.id}`,
   );
 }
 

@@ -1,0 +1,20 @@
+# Single-container OpenGRC: embedded Postgres + API + Next.js (see root Dockerfile).
+# UI: http://localhost:8080  (Next proxies API via /api/*)
+services:
+  opengrc:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:3001"
+    environment:
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-change-me}
+      BOOTSTRAP_TOKEN: ${BOOTSTRAP_TOKEN:-}
+      # Optional: auto-create first admin when DB is empty (alternative to POST /auth/bootstrap)
+      # SEED_ADMIN_EMAIL: admin@localhost
+      # SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

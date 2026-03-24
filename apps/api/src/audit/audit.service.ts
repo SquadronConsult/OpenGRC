@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuditLog } from '../entities/audit-log.entity';
+import { getCorrelationId } from '../common/correlation-context';
 
 @Injectable()
 export class AuditService {
@@ -16,12 +17,17 @@ export class AuditService {
     entityId: string | null,
     payload?: Record<string, unknown>,
   ) {
+    const correlationId = getCorrelationId();
+    const merged =
+      correlationId != null
+        ? { ...(payload || {}), correlationId }
+        : payload;
     const row = this.repo.create({
       actorId: actorId ?? undefined,
       action,
       entityType,
       entityId: entityId ?? undefined,
-      payload,
+      payload: merged ?? null,
     });
     return this.repo.save(row);
   }

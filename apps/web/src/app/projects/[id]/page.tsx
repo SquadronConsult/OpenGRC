@@ -1,8 +1,37 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import Link from 'next/link';
-import { api, API, getToken } from '@/lib/api';
+import { toast } from 'sonner';
+import {
+  ChevronLeft,
+  Search,
+  Download,
+  Zap,
+  Upload,
+  AlertTriangle,
+  PlugZap,
+  FileText,
+  Lightbulb,
+} from 'lucide-react';
+import { api, getApiBase, getToken, listItems, type PaginatedList } from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ProgressRing } from '@/components/compliance/ProgressRing';
+import { EmptyState } from '@/components/compliance/EmptyState';
 
 type Item = {
   id: string;
@@ -20,6 +49,14 @@ type Item = {
     statement: string;
     controls: string[];
   };
+  catalogRequirement?: {
+    requirementCode: string;
+    kind: string;
+    frameworkRelease?: {
+      releaseCode: string;
+      framework?: { code: string; name: string };
+    };
+  } | null;
 };
 
 const statusLabels: Record<string, string> = {
@@ -35,16 +72,21 @@ export default function ProjectDetailPage({
   params: { id: string };
 }) {
   const { id } = params;
-  const [items, setItems] = useState<Item[]>([]);
-  const [msg, setMsg] = useState('');
-  const [msgType, setMsgType] = useState<'info' | 'success' | 'error'>('info');
+  const [items, setItems] = useState<Item[] | null>(null);
   const [generating, setGenerating] = useState(false);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [connBanner, setConnBanner] = useState<{
+    failedConnectors: boolean;
+    staleAutomatedEvidence: boolean;
+  } | null>(null);
+  const [connInstances, setConnInstances] = useState<
+    { id: string; label: string; connectorId: string; lastError: string | null }[]
+  >([]);
 
   function load() {
-    api<Item[]>(`/projects/${id}/checklist`)
-      .then(setItems)
+    api<Item[] | PaginatedList<Item>>(`/projects/${id}/checklist?limit=200`)
+      .then((r) => setItems(listItems(r)))
       .catch(() => setItems([]));
   }
 
@@ -53,13 +95,27 @@ export default function ProjectDetailPage({
   }, [id]);
 
   useEffect(() => {
+    api<{
+      banner: { failedConnectors: boolean; staleAutomatedEvidence: boolean };
+      instances: { id: string; label: string; connectorId: string; lastError: string | null }[];
+    }>(`/projects/${id}/connectors/status/summary`)
+      .then((r) => {
+        setConnBanner(r.banner);
+        setConnInstances(r.instances || []);
+      })
+      .catch(() => {
+        setConnBanner(null);
+        setConnInstances([]);
+      });
+  }, [id]);
+
+  useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
       const w = sessionStorage.getItem('checklistInitWarning');
       if (w) {
         sessionStorage.removeItem('checklistInitWarning');
-        setMsg(w);
-        setMsgType('info');
+        toast.info(w);
       }
     } catch {
       /* ignore */
@@ -67,17 +123,18 @@ export default function ProjectDetailPage({
   }, [id]);
 
   const stats = useMemo(() => {
-    const total = items.length;
-    const compliant = items.filter((i) => i.status === 'compliant').length;
-    const inProgress = items.filter((i) => i.status === 'in_progress').length;
-    const notStarted = items.filter((i) => i.status === 'not_started').length;
-    const nonCompliant = items.filter((i) => i.status === 'non_compliant').length;
+    const list = items ?? [];
+    const total = list.length;
+    const compliant = list.filter((i) => i.status === 'compliant').length;
+    const inProgress = list.filter((i) => i.status === 'in_progress').length;
+    const notStarted = list.filter((i) => i.status === 'not_started').length;
+    const nonCompliant = list.filter((i) => i.status === 'non_compliant').length;
     const pct = total > 0 ? Math.round((compliant / total) * 100) : 0;
     return { total, compliant, inProgress, notStarted, nonCompliant, pct };
   }, [items]);
 
   const filtered = useMemo(() => {
-    let result = items;
+    let result = items ?? [];
     if (filter !== 'all') {
       result = result.filter((i) => i.status === filter);
     }
@@ -85,27 +142,31 @@ export default function ProjectDetailPage({
       const q = search.toLowerCase();
       result = result.filter((i) => {
         const text = i.frrRequirement?.statement || i.ksiIndicator?.statement || '';
-        const ref = i.frrRequirement ? `${i.frrRequirement.processId} ${i.frrRequirement.reqKey}` : i.ksiIndicator?.indicatorId || '';
-        return text.toLowerCase().includes(q) || ref.toLowerCase().includes(q);
+        const ref = i.frrRequirement
+          ? `${i.frrRequirement.processId} ${i.frrRequirement.reqKey}`
+          : i.ksiIndicator?.indicatorId || '';
+        const cat = i.catalogRequirement?.requirementCode || '';
+        return (
+          text.toLowerCase().includes(q) ||
+          ref.toLowerCase().includes(q) ||
+          cat.toLowerCase().includes(q)
+        );
       });
     }
     return result;
   }, [items, filter, search]);
 
   async function generate() {
-    setMsg('');
     setGenerating(true);
     try {
       const r = await api<{ created: number }>(
         `/projects/${id}/checklist/generate`,
         { method: 'POST', body: JSON.stringify({ includeKsi: true }) },
       );
-      setMsg(`Generated ${r.created} checklist items`);
-      setMsgType('success');
+      toast.success(`Generated ${r.created} checklist items`);
       load();
     } catch (e: unknown) {
-      setMsg(e instanceof Error ? e.message : 'Error generating checklist');
-      setMsgType('error');
+      toast.error(e instanceof Error ? e.message : 'Error generating checklist');
     } finally {
       setGenerating(false);
     }
@@ -116,6 +177,7 @@ export default function ProjectDetailPage({
       method: 'PATCH',
       body: JSON.stringify({ status }),
     });
+    toast.success('Status updated');
     load();
   }
 
@@ -125,12 +187,10 @@ export default function ProjectDetailPage({
         method: 'PATCH',
         body: JSON.stringify({ dueDate: dueDate || null }),
       });
-      setMsg('Due date updated');
-      setMsgType('success');
+      toast.success('Due date updated');
       load();
     } catch (e: unknown) {
-      setMsg(e instanceof Error ? e.message : 'Failed to update due date');
-      setMsgType('error');
+      toast.error(e instanceof Error ? e.message : 'Failed to update due date');
     }
   }
 
@@ -139,19 +199,20 @@ export default function ProjectDetailPage({
     const fd = new FormData();
     fd.append('file', file);
     const token = getToken();
-    await fetch(`${API}/checklist-items/${itemId}/evidence`, {
+    await fetch(`${getApiBase()}/checklist-items/${itemId}/evidence`, {
       method: 'POST',
+      credentials: 'include',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: fd,
     });
     load();
-    setMsg(`Evidence "${file.name}" uploaded`);
-    setMsgType('success');
+    toast.success(`Evidence "${file.name}" uploaded`);
   }
 
   async function exportMd() {
     const token = getToken();
-    const res = await fetch(`${API}/projects/${id}/export?format=md`, {
+    const res = await fetch(`${getApiBase()}/projects/${id}/export?format=md`, {
+      credentials: 'include',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
     const text = await res.text();
@@ -162,207 +223,362 @@ export default function ProjectDetailPage({
     a.click();
   }
 
-  return (
-    <div className="animate-in">
-      <div style={{ marginBottom: '1rem' }}>
-        <Link href="/projects" className="btn-ghost" style={{ textDecoration: 'none', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-            Projects
-          </span>
-        </Link>
-      </div>
+  const loaded = items !== null;
+  const list = items ?? [];
 
-      <div className="page-header">
+  return (
+    <div className="animate-in fade-in duration-300">
+      <Link
+        href="/projects"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+      >
+        <ChevronLeft size={14} />
+        Projects
+      </Link>
+
+      <div className="flex justify-between items-start gap-4 flex-wrap mb-6">
         <div>
-          <h1>Project Checklist</h1>
-          <p className="text-sm text-muted" style={{ marginTop: '0.25rem' }}>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Project Checklist
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Track compliance status, upload evidence, and export SSP drafts.
           </p>
         </div>
-        <div className="btn-group">
-          <button className="btn btn-primary" onClick={generate} disabled={generating}>
+        <div className="flex items-center gap-2">
+          <Button onClick={generate} disabled={generating}>
+            <Zap size={14} />
             {generating ? 'Generating...' : 'Generate Checklist'}
-          </button>
-          <button className="btn btn-secondary" onClick={exportMd}>Export Markdown</button>
+          </Button>
+          <Button variant="secondary" onClick={exportMd}>
+            <Download size={14} />
+            Export Markdown
+          </Button>
         </div>
       </div>
 
-      <div className="tab-bar">
-        <Link href={`/projects/${id}`} className="tab-item active" style={{ textDecoration: 'none' }}>Checklist</Link>
-        <Link href={`/projects/${id}/auto-scope`} className="tab-item" style={{ textDecoration: 'none' }}>Auto-Scope</Link>
-        <Link href={`/projects/${id}/poam`} className="tab-item" style={{ textDecoration: 'none' }}>POA&amp;M</Link>
-      </div>
+      <Tabs value="checklist" className="mb-6">
+        <TabsList>
+          <TabsTrigger value="checklist" asChild>
+            <Link href={`/projects/${id}`}>Checklist</Link>
+          </TabsTrigger>
+          <TabsTrigger value="auto-scope" asChild>
+            <Link href={`/projects/${id}/auto-scope`}>Auto-Scope</Link>
+          </TabsTrigger>
+          <TabsTrigger value="poam" asChild>
+            <Link href={`/projects/${id}/poam`}>POA&amp;M</Link>
+          </TabsTrigger>
+          <TabsTrigger value="risk" asChild>
+            <Link href={`/projects/${id}/risk`}>Risk</Link>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
-      {msg && <div className={`alert alert-${msgType}`}>{msg}</div>}
+      {connBanner && (connBanner.failedConnectors || connBanner.staleAutomatedEvidence) && (
+        <Alert
+          variant={connBanner.failedConnectors ? 'destructive' : 'default'}
+          className="mb-4"
+        >
+          <AlertTriangle className="size-4" />
+          <AlertDescription>
+            {connBanner.failedConnectors && (
+              <span>One or more evidence connectors reported an error on last run. </span>
+            )}
+            {connBanner.staleAutomatedEvidence && (
+              <span>
+                Some automated evidence may be older than 30 days; review connector schedules.
+              </span>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
 
-      <div className="card" style={{ marginBottom: '1rem' }}>
-        <div className="card-header" style={{ marginBottom: '0.6rem' }}>
-          <h3 style={{ marginBottom: 0 }}>Evidence guidance</h3>
-          <span className="badge badge-blue">What to upload</span>
-        </div>
-        <p className="text-sm text-muted" style={{ marginBottom: '0.45rem' }}>
-          Evidence is proof that a control is implemented and operating. Upload artifacts that an auditor can review.
-        </p>
-        <div className="gap-row">
-          <span className="badge">Policy / SOP PDFs</span>
-          <span className="badge">Screenshots</span>
-          <span className="badge">Config exports</span>
-          <span className="badge">Scan results</span>
-          <span className="badge">Logs / reports</span>
-          <span className="badge">Ticket history</span>
-        </div>
-        <p className="text-xs text-dim mt-1">
-          Tip: include date range and system scope in filenames for easier audits.
-        </p>
-      </div>
+      {connInstances.length > 0 && (
+        <Card className="mb-4">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <PlugZap size={16} className="text-muted-foreground" />
+              <CardTitle className="text-sm">Evidence connectors</CardTitle>
+              <Badge variant="secondary" className="ml-auto text-[0.65rem]">
+                Automation
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <ul className="space-y-1 text-sm text-muted-foreground pl-4 list-disc">
+              {connInstances.map((c) => (
+                <li key={c.id}>
+                  <span className="font-semibold text-foreground">{c.label}</span>{' '}
+                  ({c.connectorId})
+                  {c.lastError && (
+                    <span className="text-destructive"> — last error</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-muted-foreground">
+              Connector runs and schedules are managed via the API{' '}
+              <code className="text-[0.65rem]">/projects/:id/connectors</code>.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
-      {items.length > 0 && (
+      <Card className="mb-4">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Lightbulb size={16} className="text-muted-foreground" />
+            <CardTitle className="text-sm">Evidence guidance</CardTitle>
+            <Badge variant="secondary" className="ml-auto text-[0.65rem]">
+              What to upload
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Evidence is proof that a control is implemented and operating. Upload artifacts
+            that an auditor can review.
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            <Badge variant="outline">Policy / SOP PDFs</Badge>
+            <Badge variant="outline">Screenshots</Badge>
+            <Badge variant="outline">Config exports</Badge>
+            <Badge variant="outline">Scan results</Badge>
+            <Badge variant="outline">Logs / reports</Badge>
+            <Badge variant="outline">Ticket history</Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Tip: include date range and system scope in filenames for easier audits.
+          </p>
+        </CardContent>
+      </Card>
+
+      {loaded && list.length > 0 && (
         <>
-          <div style={{ marginBottom: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-              <span className="text-sm text-muted">Overall compliance</span>
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--success)' }}>{stats.pct}%</span>
-            </div>
-            <div className="progress-bar">
-              <div className="progress-bar-fill" style={{ width: `${stats.pct}%` }} />
-            </div>
+          <div className="grid grid-cols-2 gap-4 mb-6 sm:grid-cols-5">
+            <Card className="col-span-2 sm:col-span-1 flex flex-col items-center justify-center py-4">
+              <ProgressRing value={stats.pct} size={64} />
+              <span className="mt-2 text-xs text-muted-foreground">Overall</span>
+            </Card>
+            <Card className="flex flex-col items-center justify-center py-4">
+              <span className="text-2xl font-bold tabular-nums">{stats.total}</span>
+              <span className="text-xs text-muted-foreground">Total</span>
+            </Card>
+            <Card className="flex flex-col items-center justify-center py-4">
+              <span className="text-2xl font-bold tabular-nums text-success">
+                {stats.compliant}
+              </span>
+              <span className="text-xs text-muted-foreground">Compliant</span>
+            </Card>
+            <Card className="flex flex-col items-center justify-center py-4">
+              <span className="text-2xl font-bold tabular-nums text-primary">
+                {stats.inProgress}
+              </span>
+              <span className="text-xs text-muted-foreground">In Progress</span>
+            </Card>
+            <Card className="flex flex-col items-center justify-center py-4">
+              <span className="text-2xl font-bold tabular-nums text-destructive">
+                {stats.nonCompliant}
+              </span>
+              <span className="text-xs text-muted-foreground">Non-Compliant</span>
+            </Card>
           </div>
 
-          <div className="stats-row">
-            <div className="stat-card">
-              <div className="stat-value">{stats.total}</div>
-              <div className="stat-label">Total</div>
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <div className="relative w-full max-w-[280px]">
+              <Search
+                size={14}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                aria-hidden="true"
+              />
+              <Input
+                placeholder="Search requirements..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-8 h-8 text-sm"
+                aria-label="Search requirements"
+              />
             </div>
-            <div className="stat-card">
-              <div className="stat-value" style={{ color: 'var(--success)' }}>{stats.compliant}</div>
-              <div className="stat-label">Compliant</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-value" style={{ color: 'var(--accent)' }}>{stats.inProgress}</div>
-              <div className="stat-label">In Progress</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-value" style={{ color: 'var(--danger)' }}>{stats.nonCompliant}</div>
-              <div className="stat-label">Non-Compliant</div>
+            <div className="flex flex-wrap gap-1.5">
+              {(['all', 'not_started', 'in_progress', 'compliant', 'non_compliant'] as const).map(
+                (s) => (
+                  <Button
+                    key={s}
+                    variant={filter === s ? 'default' : 'secondary'}
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => setFilter(s)}
+                  >
+                    {s === 'all'
+                      ? `All (${stats.total})`
+                      : `${statusLabels[s]} (${list.filter((i) => i.status === s).length})`}
+                  </Button>
+                ),
+              )}
             </div>
           </div>
         </>
       )}
 
-      {items.length > 0 && (
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap' }}>
-          <input
-            className="form-input"
-            style={{ maxWidth: 280, fontSize: '0.82rem' }}
-            placeholder="Search requirements..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <div className="btn-group">
-            {['all', 'not_started', 'in_progress', 'compliant', 'non_compliant'].map((s) => (
-              <button
-                key={s}
-                className={filter === s ? 'btn btn-primary' : 'btn btn-secondary'}
-                onClick={() => setFilter(s)}
-                style={{ fontSize: '0.7rem', padding: '0.3rem 0.6rem' }}
-              >
-                {s === 'all' ? `All (${stats.total})` : `${statusLabels[s]} (${items.filter((i) => i.status === s).length})`}
-              </button>
+      {!loaded ? (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[140px]">Reference</TableHead>
+              <TableHead>Requirement</TableHead>
+              <TableHead className="w-[140px]">Status</TableHead>
+              <TableHead className="w-[170px]">Due Date</TableHead>
+              <TableHead className="w-[120px]">Evidence</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: 8 }).map((_, idx) => (
+              <TableRow key={idx}>
+                <TableCell>
+                  <Skeleton className="h-4 w-20" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-full max-w-[300px]" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-8 w-28" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-8 w-36" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-8 w-20" />
+                </TableCell>
+              </TableRow>
             ))}
-          </div>
-        </div>
-      )}
-
-      {filtered.length > 0 ? (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th style={{ width: 140 }}>Reference</th>
-                <th>Requirement</th>
-                <th style={{ width: 140 }}>Status</th>
-                <th style={{ width: 170 }}>Due Date</th>
-                <th style={{ width: 120 }}>Evidence</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((i) => (
-                <tr key={i.id}>
-                  <td>
-                    <div style={{ fontWeight: 600, fontSize: '0.82rem', color: 'var(--text)' }}>
-                      {i.frrRequirement
-                        ? `${i.frrRequirement.processId}`
-                        : i.ksiIndicator?.indicatorId}
+          </TableBody>
+        </Table>
+      ) : filtered.length > 0 ? (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[140px]">Reference</TableHead>
+              <TableHead>Requirement</TableHead>
+              <TableHead className="w-[140px]">Status</TableHead>
+              <TableHead className="w-[170px]">Due Date</TableHead>
+              <TableHead className="w-[120px]">Evidence</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.map((i) => (
+              <TableRow key={i.id}>
+                <TableCell className="align-top">
+                  <div className="font-semibold text-sm text-foreground">
+                    {i.frrRequirement
+                      ? i.frrRequirement.processId
+                      : i.ksiIndicator?.indicatorId}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {i.frrRequirement?.reqKey || ''}
+                  </div>
+                  <Badge
+                    variant={i.frrRequirement ? 'default' : 'secondary'}
+                    className="mt-1"
+                  >
+                    {i.frrRequirement?.primaryKeyWord || 'KSI'}
+                  </Badge>
+                  {i.catalogRequirement && (
+                    <div className="text-xs text-muted-foreground mt-1.5 leading-snug">
+                      Catalog:{' '}
+                      <code className="text-[0.65rem]">
+                        {i.catalogRequirement.frameworkRelease?.framework?.code || '—'} ·{' '}
+                        {i.catalogRequirement.requirementCode}
+                      </code>
                     </div>
-                    <div className="text-xs text-dim" style={{ marginTop: '0.1rem' }}>
-                      {i.frrRequirement?.reqKey || ''}
-                    </div>
-                    <span className={`badge ${i.frrRequirement ? 'badge-blue' : 'badge-yellow'}`} style={{ marginTop: '0.25rem' }}>
-                      {i.frrRequirement?.primaryKeyWord || 'KSI'}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ fontSize: '0.82rem', lineHeight: 1.55, color: 'var(--text-secondary)' }}>
-                      {i.frrRequirement?.statement || i.ksiIndicator?.statement}
-                    </div>
-                  </td>
-                  <td>
-                    <select
-                      className="status-select"
-                      value={i.status}
-                      onChange={(e) => setStatus(i.id, e.target.value)}
-                    >
-                      <option value="not_started">Not Started</option>
-                      <option value="in_progress">In Progress</option>
-                      <option value="compliant">Compliant</option>
-                      <option value="non_compliant">Non-Compliant</option>
-                    </select>
-                  </td>
-                  <td>
-                    <input
-                      className="form-input"
-                      type="date"
-                      value={i.dueDate ? new Date(i.dueDate).toISOString().slice(0, 10) : ''}
-                      onChange={(e) => setDueDate(i.id, e.target.value)}
-                      style={{ maxWidth: '155px', fontSize: '0.78rem', padding: '0.35rem 0.5rem' }}
-                    />
-                  </td>
-                  <td>
-                    <label className="file-upload-label">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="17 8 12 3 7 8" />
-                        <line x1="12" y1="3" x2="12" y2="15" />
-                      </svg>
-                      Upload
-                      <input type="file" onChange={(e) => uploadEvidence(i.id, e.target.files?.[0] || null)} />
-                    </label>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : items.length === 0 ? (
-        <div className="empty-state">
-          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-            <line x1="16" y1="13" x2="8" y2="13" />
-            <line x1="16" y1="17" x2="8" y2="17" />
-          </svg>
-          <p>
-            No checklist items yet. Ensure FRMR data is loaded, then click &quot;Generate Checklist&quot;.
-          </p>
-        </div>
+                  )}
+                </TableCell>
+                <TableCell className="align-top whitespace-normal">
+                  <div className="text-sm leading-relaxed text-muted-foreground">
+                    {i.frrRequirement?.statement || i.ksiIndicator?.statement}
+                  </div>
+                </TableCell>
+                <TableCell className="align-top">
+                  <select
+                    className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+                    value={i.status}
+                    onChange={(e) => setStatus(i.id, e.target.value)}
+                    aria-label="Compliance status"
+                  >
+                    <option value="not_started">Not Started</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="compliant">Compliant</option>
+                    <option value="non_compliant">Non-Compliant</option>
+                  </select>
+                </TableCell>
+                <TableCell className="align-top">
+                  <Input
+                    type="date"
+                    className="h-8 w-40"
+                    aria-label="Due date"
+                    value={
+                      i.dueDate
+                        ? new Date(i.dueDate).toISOString().slice(0, 10)
+                        : ''
+                    }
+                    onChange={(e) => setDueDate(i.id, e.target.value)}
+                  />
+                </TableCell>
+                <TableCell className="align-top">
+                  <EvidenceUploadButton
+                    onUpload={(file) => uploadEvidence(i.id, file)}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      ) : list.length === 0 ? (
+        <EmptyState
+          icon={FileText}
+          title="No checklist items yet"
+          description='Ensure FRMR data is loaded, then click "Generate Checklist".'
+          actionLabel="Generate Checklist"
+          onAction={generate}
+        />
       ) : (
-        <div className="empty-state">
-          <p>No items match your current filter.</p>
-        </div>
+        <EmptyState
+          icon={Search}
+          title="No items match your current filter"
+          description="Try adjusting your search or filter criteria."
+        />
       )}
     </div>
+  );
+}
+
+function EvidenceUploadButton({
+  onUpload,
+}: {
+  onUpload: (file: File) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => inputRef.current?.click()}
+      >
+        <Upload size={14} />
+        Upload
+      </Button>
+      <input
+        ref={inputRef}
+        type="file"
+        className="hidden"
+        aria-label="Upload evidence file"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) onUpload(file);
+          e.target.value = '';
+        }}
+      />
+    </>
   );
 }

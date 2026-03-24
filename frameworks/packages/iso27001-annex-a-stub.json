@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "framework": {
+    "code": "iso27001_annex_a",
+    "name": "ISO/IEC 27001 Annex A",
+    "description": "Stub Annex A controls for catalog import."
+  },
+  "release": { "releaseCode": "2022", "label": "Annex A 2022" },
+  "controls": [{ "controlCode": "A.5", "title": "Organizational controls" }],
+  "requirements": [
+    {
+      "controlCode": "A.5",
+      "requirementCode": "A.5.1",
+      "statement": "Policies for information security shall be defined, approved by management, published and communicated."
+    }
+  ]
+}

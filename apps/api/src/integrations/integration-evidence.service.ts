@@ -48,7 +48,9 @@ const rateState = new Map<
 >();
 
 function normalizeFramework(framework?: string) {
-  return (framework || 'frmr').trim().toLowerCase();
+  const f = (framework || 'frmr').trim().toLowerCase();
+  if (f === 'fedramp_frmr' || f === 'fedramp') return 'frmr';
+  return f;
 }
 
 function normalizeControlId(controlId: string) {
@@ -115,6 +117,7 @@ export class IntegrationEvidenceService {
         label: dto.label,
         apiKeyHash: keyHash,
         apiKeyPrefix: plainKey.slice(0, 12),
+        kind: 'inbound',
         isActive: true,
       }),
     );
@@ -276,6 +279,39 @@ export class IntegrationEvidenceService {
     );
   }
 
+  /**
+   * Internal: connector runner ingests without HTTP auth. Skips integration rate limits.
+   */
+  async ingestConnectorItems(
+    projectId: string,
+    items: EvidenceUpsertItemDto[],
+  ): Promise<{
+    accepted: Record<string, unknown>[];
+    rejected: { controlId: string; reason: string }[];
+  }> {
+    const accepted: Record<string, unknown>[] = [];
+    const rejected: { controlId: string; reason: string }[] = [];
+    for (const evidence of items) {
+      try {
+        const ingested = await this.ingestOne(projectId, {
+          ...evidence,
+          metadata: {
+            ...(evidence.metadata || {}),
+            automated: true,
+          },
+        });
+        accepted.push(ingested);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        rejected.push({
+          controlId: evidence.controlId,
+          reason: message,
+        });
+      }
+    }
+    return { accepted, rejected };
+  }
+
   async bulkIngest(dto: EvidenceBulkIngestRequestDto, idempotencyHeader?: string) {
     const effectiveIdempotency = dto.idempotencyKey || idempotencyHeader || null;
     return this.withIdempotency(
@@ -429,6 +465,10 @@ export class IntegrationEvidenceService {
         filename: `${evidence.evidenceType || 'evidence'}:${normalizeFramework(evidence.framework)}:${normalizeControlId(evidence.controlId)}`,
         sourceConnector: evidence.sourceConnector || 'integration_v1',
         metadata,
+        artifactType: evidence.artifactType || null,
+        sourceSystem: evidence.sourceSystem || null,
+        collectionStart: evidence.collectionStart ? new Date(evidence.collectionStart) : null,
+        collectionEnd: evidence.collectionEnd ? new Date(evidence.collectionEnd) : null,
       }),
     );
     return {
@@ -449,7 +489,13 @@ export class IntegrationEvidenceService {
     if (checklistItemId) {
       const exact = await this.checklistItems.findOne({
         where: { id: checklistItemId, projectId },
-        relations: ['frrRequirement', 'ksiIndicator'],
+        relations: [
+          'frrRequirement',
+          'ksiIndicator',
+          'catalogRequirement',
+          'catalogRequirement.frameworkRelease',
+          'catalogRequirement.frameworkRelease.framework',
+        ],
       });
       if (!exact) throw new NotFoundException('checklistItemId does not belong to project');
       return {
@@ -472,7 +518,13 @@ export class IntegrationEvidenceService {
     if (linked) {
       const linkedItem = await this.checklistItems.findOne({
         where: { id: linked.checklistItemId, projectId },
-        relations: ['frrRequirement', 'ksiIndicator'],
+        relations: [
+          'frrRequirement',
+          'ksiIndicator',
+          'catalogRequirement',
+          'catalogRequirement.frameworkRelease',
+          'catalogRequirement.frameworkRelease.framework',
+        ],
       });
       if (linkedItem) {
         return {
@@ -491,7 +543,13 @@ export class IntegrationEvidenceService {
 
     const byItemId = await this.checklistItems.findOne({
       where: { id: controlId, projectId },
-      relations: ['frrRequirement', 'ksiIndicator'],
+      relations: [
+        'frrRequirement',
+        'ksiIndicator',
+        'catalogRequirement',
+        'catalogRequirement.frameworkRelease',
+        'catalogRequirement.frameworkRelease.framework',
+      ],
     });
     if (byItemId) {
       return {
@@ -676,7 +734,13 @@ export class IntegrationEvidenceService {
   private async buildVerificationHint(projectId: string) {
     const item = await this.checklistItems.findOne({
       where: { projectId },
-      relations: ['frrRequirement', 'ksiIndicator'],
+      relations: [
+        'frrRequirement',
+        'ksiIndicator',
+        'catalogRequirement',
+        'catalogRequirement.frameworkRelease',
+        'catalogRequirement.frameworkRelease.framework',
+      ],
       order: { id: 'ASC' },
     });
     if (!item) {
@@ -692,7 +756,12 @@ export class IntegrationEvidenceService {
 
     let controlId: string;
     let strategy: string;
-    if (item.frrRequirement?.processId && item.frrRequirement?.reqKey) {
+    if (item.catalogRequirement?.requirementCode) {
+      const fc =
+        item.catalogRequirement.frameworkRelease?.framework?.code || 'fedramp_frmr';
+      controlId = `${fc}:${item.catalogRequirement.requirementCode}`;
+      strategy = 'catalog_requirement_code';
+    } else if (item.frrRequirement?.processId && item.frrRequirement?.reqKey) {
       controlId = `frr:${item.frrRequirement.processId}:${item.frrRequirement.reqKey}`;
       strategy = 'frr_process_reqkey';
     } else if (item.frrRequirement?.reqKey) {
@@ -716,6 +785,7 @@ export class IntegrationEvidenceService {
         strategy,
         frrRequirementId: item.frrRequirementId || null,
         ksiIndicatorId: item.ksiIndicatorId || null,
+        catalogRequirementId: item.catalogRequirementId || null,
       },
     };
   }

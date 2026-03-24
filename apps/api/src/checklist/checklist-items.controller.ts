@@ -7,6 +7,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -15,9 +16,12 @@ import { ProjectsService } from '../projects/projects.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditService } from '../audit/audit.service';
+import { PatchChecklistItemDto } from './dto/patch-checklist-item.dto';
 
+@ApiTags('checklist-items')
 @Controller('checklist-items')
 @UseGuards(JwtAuthGuard)
+@ApiBearerAuth('bearer')
 export class ChecklistItemsController {
   constructor(
     @InjectRepository(ChecklistItem) private readonly repo: Repository<ChecklistItem>,
@@ -28,16 +32,11 @@ export class ChecklistItemsController {
   ) {}
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Update checklist item' })
   async patch(
     @Param('id') id: string,
     @Req() req: { user: { userId: string; role: string } },
-    @Body()
-    b: {
-      status?: string;
-      ownerUserId?: string;
-      dueDate?: string;
-      reviewState?: string;
-    },
+    @Body() b: PatchChecklistItemDto,
   ) {
     const item = await this.repo.findOne({
       where: { id },
@@ -71,7 +70,7 @@ export class ChecklistItemsController {
       'checklist.update',
       'checklist_item',
       id,
-      b,
+      { ...b },
     );
     return item;
   }

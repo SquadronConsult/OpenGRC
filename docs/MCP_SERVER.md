@@ -4,6 +4,7 @@ This project now runs MCP as a host daemon with Streamable HTTP transport so Cur
 
 ## Runtime Model
 
+- **Protocol version:** `MCP_PROTOCOL_VERSION` (default `1.0.0` in `apps/mcp-server/src/config.mjs`). `mcp_capabilities_v1` returns `mcpProtocolVersion` and `opengrcApiVersion` for agents to pin expectations.
 - Docker services run app components (`api`, `web`, optional `mcp` container for parity).
 - MCP client traffic goes to host daemon URL:
   - `http://127.0.0.1:3334/mcp`

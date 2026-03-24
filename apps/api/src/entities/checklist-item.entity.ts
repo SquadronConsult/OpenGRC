@@ -10,6 +10,7 @@ import { Project } from './project.entity';
 import { User } from './user.entity';
 import { FrrRequirement } from './frr-requirement.entity';
 import { KsiIndicator } from './ksi-indicator.entity';
+import { CatalogRequirement } from './catalog-requirement.entity';
 import { EvidenceItem } from './evidence-item.entity';
 import { Finding } from './finding.entity';
 
@@ -38,6 +39,14 @@ export class ChecklistItem {
   @ManyToOne(() => KsiIndicator, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'ksi_indicator_id' })
   ksiIndicator: KsiIndicator;
+
+  /** Unified catalog requirement (generic framework model); FRR/KSI remain during rollout. */
+  @Column({ name: 'catalog_requirement_id', type: 'varchar', nullable: true })
+  catalogRequirementId: string | null;
+
+  @ManyToOne(() => CatalogRequirement, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'catalog_requirement_id' })
+  catalogRequirement: CatalogRequirement | null;
 
   @Column({ type: 'varchar', default: 'not_started' })
   status: string;

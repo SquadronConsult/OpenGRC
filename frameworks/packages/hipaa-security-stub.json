@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "framework": {
+    "code": "hipaa_security",
+    "name": "HIPAA Security Rule",
+    "description": "Stub HIPAA Security safeguards for catalog import."
+  },
+  "release": { "releaseCode": "2003", "label": "Final Rule" },
+  "controls": [{ "controlCode": "164.312", "title": "Technical safeguards" }],
+  "requirements": [
+    {
+      "controlCode": "164.312",
+      "requirementCode": "164.312(a)(1)",
+      "statement": "Access control: Implement technical policies and procedures for electronic information systems."
+    }
+  ]
+}

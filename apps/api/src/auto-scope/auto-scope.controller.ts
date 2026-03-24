@@ -8,16 +8,23 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AutoScopeService } from './auto-scope.service';
 import { AutoScopeRunOptions } from './auto-scope.types';
+import { AutoScopeRecommendationListQueryDto } from './dto/recommendation-list-query.dto';
+import { skipTakeFromPageLimit } from '../common/dto/page-limit-query.dto';
+import { parseSortParam } from '../common/sort/parse-sort';
 
+@ApiTags('auto-scope')
 @Controller('projects/:projectId/auto-scope')
 @UseGuards(JwtAuthGuard)
+@ApiBearerAuth('bearer')
 export class AutoScopeController {
   constructor(private readonly autoScope: AutoScopeService) {}
 
   @Post('run')
+  @ApiOperation({ summary: 'Run auto-scope' })
   async run(
     @Param('projectId') projectId: string,
     @Req() req: { user: { userId: string; role: string } },
@@ -27,6 +34,7 @@ export class AutoScopeController {
   }
 
   @Post('preflight')
+  @ApiOperation({ summary: 'Auto-scope preflight' })
   async preflight(
     @Param('projectId') projectId: string,
     @Req() req: { user: { userId: string; role: string } },
@@ -41,26 +49,35 @@ export class AutoScopeController {
   }
 
   @Get('recommendations')
+  @ApiOperation({ summary: 'List auto-scope recommendations (paginated)' })
   async list(
     @Param('projectId') projectId: string,
     @Req() req: { user: { userId: string; role: string } },
-    @Query('status') status?: string,
-    @Query('decision') decision?: string,
-    @Query('runId') runId?: string,
-    @Query('minConfidence') minConfidence?: string,
+    @Query() q: AutoScopeRecommendationListQueryDto,
   ) {
-    return this.autoScope.listRecommendations(projectId, req.user.userId, req.user.role, {
-      status,
-      decision,
-      runId,
-      minConfidence:
-        minConfidence != null && minConfidence !== ''
-          ? parseFloat(minConfidence)
-          : undefined,
-    });
+    const paging = skipTakeFromPageLimit(q);
+    const sort = parseSortParam(
+      q.sort ?? '-createdAt',
+      { createdAt: 'r.created_at', confidence: 'r.confidence' },
+      'createdAt',
+    );
+    return this.autoScope.listRecommendations(
+      projectId,
+      req.user.userId,
+      req.user.role,
+      {
+        status: q.status,
+        decision: q.decision,
+        runId: q.runId,
+        minConfidence: q.minConfidence,
+      },
+      paging,
+      sort,
+    );
   }
 
   @Post('recommendations/:recommendationId/approve')
+  @ApiOperation({ summary: 'Approve recommendation' })
   async approve(
     @Param('projectId') projectId: string,
     @Param('recommendationId') recommendationId: string,
@@ -77,6 +94,7 @@ export class AutoScopeController {
   }
 
   @Post('recommendations/:recommendationId/reject')
+  @ApiOperation({ summary: 'Reject recommendation' })
   async reject(
     @Param('projectId') projectId: string,
     @Param('recommendationId') recommendationId: string,
@@ -93,6 +111,7 @@ export class AutoScopeController {
   }
 
   @Post('recommendations/bulk-approve')
+  @ApiOperation({ summary: 'Bulk approve recommendations' })
   async bulkApprove(
     @Param('projectId') projectId: string,
     @Req() req: { user: { userId: string; role: string } },

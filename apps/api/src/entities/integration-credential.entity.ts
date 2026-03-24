@@ -30,6 +30,13 @@ export class IntegrationCredential {
   @Column({ name: 'api_key_prefix', type: 'varchar' })
   apiKeyPrefix: string;
 
+  /**
+   * inbound: hashed API keys for machine evidence ingest (default).
+   * Outbound connector secrets use connector instance config_json until a vault integration is added.
+   */
+  @Column({ type: 'varchar', default: 'inbound' })
+  kind: string;
+
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;
 

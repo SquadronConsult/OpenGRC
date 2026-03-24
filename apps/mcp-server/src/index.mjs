@@ -11,7 +11,7 @@ import {
   CallToolRequestSchema,
   isInitializeRequest,
 } from '@modelcontextprotocol/sdk/types.js';
-import { config } from './config.mjs';
+import { config, MCP_PROTOCOL_VERSION } from './config.mjs';
 import {
   assertSafeFileForWrite,
   assertStepBudget,
@@ -25,6 +25,7 @@ import {
   syncGrcEvidence,
   createProjectV1,
   getFrmrTaxonomy,
+  getCatalogFrameworks,
   exportProjectV1,
   exportPoamV1,
   fedrampOscalReportV1,
@@ -35,6 +36,12 @@ import {
   evidenceLinkTriggerAutoScopeV1,
   evidenceLinkMapControlV1,
   evidenceLinkProjectBootstrapVerifyV1,
+  connectorsListV1,
+  connectorsRegistryV1,
+  connectorsStatusV1,
+  connectorsRunV1,
+  connectorsRunsV1,
+  connectorsCreateV1,
 } from './utils/opengrc.mjs';
 
 const execFileAsync = promisify(execFile);
@@ -528,6 +535,7 @@ function isCommandAllowed(cmd) {
 
 async function runValidationCommands(commands = [], workspaceRoot = config.workspaceRoot) {
   const results = [];
+  const isWin = process.platform === 'win32';
   for (const cmd of commands) {
     if (!isCommandAllowed(cmd)) {
       results.push({
@@ -539,15 +547,21 @@ async function runValidationCommands(commands = [], workspaceRoot = config.works
       continue;
     }
     try {
-      const { stdout, stderr } = await execFileAsync(
-        'bash',
-        ['-lc', cmd],
-        {
-          cwd: workspaceRoot,
-          timeout: config.commandTimeoutMs,
-          maxBuffer: 1024 * 1024 * 8,
-        },
-      );
+      const { stdout, stderr } = isWin
+        ? await execFileAsync(
+            process.env.ComSpec || 'cmd.exe',
+            ['/d', '/s', '/c', cmd],
+            {
+              cwd: workspaceRoot,
+              timeout: config.commandTimeoutMs,
+              maxBuffer: 1024 * 1024 * 8,
+            },
+          )
+        : await execFileAsync('bash', ['-lc', cmd], {
+            cwd: workspaceRoot,
+            timeout: config.commandTimeoutMs,
+            maxBuffer: 1024 * 1024 * 8,
+          });
       results.push({
         command: cmd,
         ok: true,
@@ -843,6 +857,80 @@ const tools = [
     },
   },
   {
+    name: 'connectors_registry_v1',
+    description: 'List built-in evidence connector types (id, version) for automation.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['projectId'],
+      properties: { projectId: { type: 'string' } },
+    },
+  },
+  {
+    name: 'connectors_list_v1',
+    description: 'List connector instances configured for a project (secrets redacted).',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['projectId'],
+      properties: { projectId: { type: 'string' } },
+    },
+  },
+  {
+    name: 'connectors_status_v1',
+    description:
+      'Summarize connector health, stale automated evidence flags, and last run errors.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['projectId'],
+      properties: { projectId: { type: 'string' } },
+    },
+  },
+  {
+    name: 'connectors_run_v1',
+    description: 'Trigger a manual collection run for one connector instance.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['projectId', 'instanceId'],
+      properties: {
+        projectId: { type: 'string' },
+        instanceId: { type: 'string' },
+      },
+    },
+  },
+  {
+    name: 'connectors_runs_v1',
+    description: 'Inspect recent run history for a connector instance.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['projectId', 'instanceId'],
+      properties: {
+        projectId: { type: 'string' },
+        instanceId: { type: 'string' },
+        limit: { type: 'number' },
+      },
+    },
+  },
+  {
+    name: 'connectors_create_v1',
+    description: 'Create a connector instance (GitHub, synthetic, AWS, etc.) with JSON config.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['projectId', 'connectorId', 'label'],
+      properties: {
+        projectId: { type: 'string' },
+        connectorId: { type: 'string' },
+        label: { type: 'string' },
+        enabled: { type: 'boolean' },
+        config: { type: 'object' },
+      },
+    },
+  },
+  {
     name: 'evidence_link_project_bootstrap_verify_v1',
     description:
       'Create integration-auth project and run create->resolve/link->evidence->auto-scope verification chain.',
@@ -878,6 +966,16 @@ const tools = [
         layer: { type: 'string', enum: ['both', '20x', 'rev5'] },
         actor: { type: 'string' },
       },
+    },
+  },
+  {
+    name: 'catalog_frameworks_v1',
+    description:
+      'List generic compliance frameworks registered in the catalog (fedramp_frmr, nist_csf_2, …). Complements frmr_taxonomy_v1 with stable framework codes.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {},
     },
   },
   {
@@ -1006,7 +1104,7 @@ function createProtocolServer() {
   const server = new Server(
     {
       name: 'open-grc-mcp',
-      version: '0.1.0',
+      version: MCP_PROTOCOL_VERSION,
     },
     {
       capabilities: {
@@ -1037,7 +1135,9 @@ function createProtocolServer() {
         return textResult({
           ok: true,
           server: 'open-grc-mcp',
-          version: '0.1.0',
+          mcpProtocolVersion: MCP_PROTOCOL_VERSION,
+          opengrcApiVersion: process.env.OPENGRC_API_VERSION || '0.2.0',
+          version: MCP_PROTOCOL_VERSION,
           startHere: {
             tool: 'compliance_agent_autopilot_v1',
             reason:
@@ -1073,6 +1173,12 @@ function createProtocolServer() {
               tool: 'frmr_taxonomy_v1',
               purpose:
                 'Resolve 20x/rev5 process and requirement structure before planning or reporting.',
+            },
+            {
+              name: 'Catalog frameworks',
+              tool: 'catalog_frameworks_v1',
+              purpose:
+                'List registered framework codes (fedramp_frmr, nist_csf_2, …) for stable requirement references.',
             },
             {
               name: 'FedRAMP report package',
@@ -1233,6 +1339,31 @@ function createProtocolServer() {
         return textResult(result);
       }
 
+      if (name === 'connectors_registry_v1') {
+        const result = await connectorsRegistryV1(args);
+        return textResult(result);
+      }
+      if (name === 'connectors_list_v1') {
+        const result = await connectorsListV1(args);
+        return textResult(result);
+      }
+      if (name === 'connectors_status_v1') {
+        const result = await connectorsStatusV1(args);
+        return textResult(result);
+      }
+      if (name === 'connectors_run_v1') {
+        const result = await connectorsRunV1(args);
+        return textResult(result);
+      }
+      if (name === 'connectors_runs_v1') {
+        const result = await connectorsRunsV1(args);
+        return textResult(result);
+      }
+      if (name === 'connectors_create_v1') {
+        const result = await connectorsCreateV1(args);
+        return textResult(result);
+      }
+
       if (name === 'evidence_link_project_bootstrap_verify_v1') {
         const result = await evidenceLinkProjectBootstrapVerifyV1(args);
         return textResult(result);
@@ -1241,6 +1372,15 @@ function createProtocolServer() {
       if (name === 'frmr_taxonomy_v1') {
         const result = await getFrmrTaxonomy(args);
         return textResult(result);
+      }
+
+      if (name === 'catalog_frameworks_v1') {
+        const raw = await getCatalogFrameworks();
+        const frameworks = Array.isArray(raw) ? raw : raw?.frameworks || [];
+        return textResult({
+          frameworks,
+          aliases: { frmr: 'fedramp_frmr', fedramp: 'fedramp_frmr' },
+        });
       }
 
       if (name === 'compliance_agent_autopilot_v1') {

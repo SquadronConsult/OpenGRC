@@ -5,7 +5,12 @@ import { Project } from '../entities/project.entity';
 import { FrrRequirement } from '../entities/frr-requirement.entity';
 import { KsiIndicator } from '../entities/ksi-indicator.entity';
 import { ChecklistItem } from '../entities/checklist-item.entity';
+import { EvidenceItem } from '../entities/evidence-item.entity';
 import { FrmrVersion } from '../entities/frmr-version.entity';
+import { FrmrCatalogSyncService } from '../catalog/frmr-catalog-sync.service';
+import type { PaginatedResult } from '../common/pagination/paginated-result';
+import { toPaginated } from '../common/pagination/paginated-result';
+import { parseSortParam } from '../common/sort/parse-sort';
 
 @Injectable()
 export class ChecklistService {
@@ -17,8 +22,11 @@ export class ChecklistService {
     private readonly ksiRepo: Repository<KsiIndicator>,
     @InjectRepository(ChecklistItem)
     private readonly itemRepo: Repository<ChecklistItem>,
+    @InjectRepository(EvidenceItem)
+    private readonly evidenceRepo: Repository<EvidenceItem>,
     @InjectRepository(FrmrVersion)
     private readonly verRepo: Repository<FrmrVersion>,
+    private readonly frmrCatalogSync: FrmrCatalogSyncService,
   ) {}
 
   parseActors(s: string): string[] {
@@ -39,6 +47,12 @@ export class ChecklistService {
           take: 1,
         }).then((rows) => rows[0] ?? null);
     if (!ver) throw new NotFoundException('No FRMR version ingested');
+
+    let release = await this.frmrCatalogSync.getReleaseForFrmrVersion(ver.id);
+    if (!release) {
+      await this.frmrCatalogSync.syncFromFrmrVersion(ver.id);
+      release = await this.frmrCatalogSync.getReleaseForFrmrVersion(ver.id);
+    }
 
     const versionId = ver.id;
     const actors = this.parseActors(project.actorLabels);
@@ -75,10 +89,14 @@ export class ChecklistService {
         else if (r.timeframeType === 'months')
           due.setMonth(due.getMonth() + r.timeframeNum);
       }
+      const catalogReq =
+        release &&
+        (await this.frmrCatalogSync.findCatalogRequirementForFrr(release.id, r.id));
       await this.itemRepo.save(
         this.itemRepo.create({
           projectId,
           frrRequirementId: r.id,
+          catalogRequirementId: catalogReq?.id ?? null,
           status: 'not_started',
           ...(due ? { dueDate: due } : {}),
         }),
@@ -93,10 +111,14 @@ export class ChecklistService {
           where: { projectId, ksiIndicatorId: k.id },
         });
         if (exists) continue;
+        const catalogReq =
+          release &&
+          (await this.frmrCatalogSync.findCatalogRequirementForKsi(release.id, k.id));
         await this.itemRepo.save(
           this.itemRepo.create({
             projectId,
             ksiIndicatorId: k.id,
+            catalogRequirementId: catalogReq?.id ?? null,
             status: 'not_started',
           }),
         );
@@ -107,12 +129,194 @@ export class ChecklistService {
     return created;
   }
 
-  async listChecklist(projectId: string) {
-    return this.itemRepo.find({
-      where: { projectId },
-      relations: ['frrRequirement', 'ksiIndicator', 'ownerUser'],
-      order: { id: 'ASC' },
+  /** Paginated checklist rows with catalog/FRR/KSI joins (no evidence graph). */
+  async listChecklistPaginated(
+    projectId: string,
+    page: number,
+    limit: number,
+    sort?: string,
+  ): Promise<PaginatedResult<ChecklistItem>> {
+    const total = await this.itemRepo.count({ where: { projectId } });
+    const skip = (page - 1) * limit;
+    const allowed = {
+      id: 'ci.id',
+      status: 'ci.status',
+      dueDate: 'ci.due_date',
+      reviewState: 'ci.review_state',
+    };
+    const { column, order } = parseSortParam(sort, allowed, 'id');
+
+    const items = await this.itemRepo
+      .createQueryBuilder('ci')
+      .leftJoinAndSelect('ci.frrRequirement', 'frr')
+      .leftJoinAndSelect('ci.ksiIndicator', 'ksi')
+      .leftJoinAndSelect('ci.ownerUser', 'owner')
+      .leftJoinAndSelect('ci.catalogRequirement', 'cr')
+      .leftJoinAndSelect('cr.frameworkRelease', 'fr_rel')
+      .leftJoinAndSelect('fr_rel.framework', 'fw')
+      .where('ci.projectId = :projectId', { projectId })
+      .orderBy(column, order)
+      .skip(skip)
+      .take(limit)
+      .getMany();
+
+    return toPaginated(items, page, limit, total);
+  }
+
+  /**
+   * Evidence gap report: summary counts, automated/stale metrics, and a paginated list of
+   * controls with no evidence. Does not load full checklist+evidence graphs.
+   */
+  async getEvidenceGapsReport(
+    projectId: string,
+    page: number,
+    limit: number,
+    staleDays = 30,
+  ) {
+    const totalControls = await this.itemRepo.count({ where: { projectId } });
+
+    const missingEvidenceCount = await this.itemRepo
+      .createQueryBuilder('ci')
+      .where('ci.projectId = :projectId', { projectId })
+      .andWhere(
+        `NOT EXISTS (SELECT 1 FROM evidence_items e WHERE e.checklist_item_id = ci.id)`,
+      )
+      .getCount();
+
+    const automatedEvidence = await this.computeAutomatedEvidenceStats(
+      projectId,
+      staleDays,
+    );
+
+    const skip = (page - 1) * limit;
+    const rows = await this.itemRepo
+      .createQueryBuilder('ci')
+      .leftJoinAndSelect('ci.frrRequirement', 'frr')
+      .leftJoinAndSelect('ci.ksiIndicator', 'ksi')
+      .leftJoinAndSelect('ci.catalogRequirement', 'cr')
+      .leftJoinAndSelect('cr.frameworkRelease', 'fr_rel')
+      .leftJoinAndSelect('fr_rel.framework', 'fw')
+      .where('ci.projectId = :projectId', { projectId })
+      .andWhere(
+        `NOT EXISTS (SELECT 1 FROM evidence_items e WHERE e.checklist_item_id = ci.id)`,
+      )
+      .orderBy('ci.id', 'ASC')
+      .skip(skip)
+      .take(limit)
+      .getMany();
+
+    const items = rows.map((i) => ({
+      id: i.id,
+      status: i.status,
+      ref: i.frrRequirement
+        ? `${i.frrRequirement.processId} ${i.frrRequirement.reqKey}`
+        : i.ksiIndicator?.indicatorId || i.id,
+      catalogRequirementCode: i.catalogRequirement?.requirementCode ?? null,
+      frameworkCode: i.catalogRequirement?.frameworkRelease?.framework?.code ?? null,
+    }));
+
+    const pageResult = toPaginated(items, page, limit, missingEvidenceCount);
+
+    return {
+      projectId,
+      totalControls,
+      missingEvidenceCount,
+      automatedEvidence,
+      items: pageResult.items,
+      page: pageResult.page,
+      limit: pageResult.limit,
+      total: pageResult.total,
+      hasMore: pageResult.hasMore,
+    };
+  }
+
+  private async computeAutomatedEvidenceStats(projectId: string, staleDays: number) {
+    const staleMs = staleDays * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const evs = await this.evidenceRepo.find({
+      where: { checklistItem: { projectId } },
+      select: {
+        id: true,
+        checklistItemId: true,
+        metadata: true,
+        createdAt: true,
+      },
     });
+
+    const byCid = new Map<string, EvidenceItem[]>();
+    for (const e of evs) {
+      const arr = byCid.get(e.checklistItemId) ?? [];
+      arr.push(e);
+      byCid.set(e.checklistItemId, arr);
+    }
+
+    let controlsWithOnlyAutomated = 0;
+    let controlsWithStaleAutomated = 0;
+    for (const ev of byCid.values()) {
+      if (ev.length === 0) continue;
+      const auto = ev.filter(
+        (x) =>
+          x.metadata && (x.metadata as { automated?: boolean }).automated === true,
+      );
+      if (auto.length === ev.length) controlsWithOnlyAutomated += 1;
+      const stale = auto.some((x) => {
+        const created = x.createdAt ? new Date(x.createdAt).getTime() : 0;
+        return created && now - created > staleMs;
+      });
+      if (stale) controlsWithStaleAutomated += 1;
+    }
+
+    return {
+      controlsWithOnlyAutomated,
+      controlsWithStaleAutomated,
+      staleAfterDays: staleDays,
+    };
+  }
+
+  /** Attach catalog_requirement_id to existing rows that only have FRR/KSI links. */
+  async backfillCatalogRequirementLinks(projectId: string): Promise<number> {
+    const project = await this.projRepo.findOne({ where: { id: projectId } });
+    if (!project) throw new NotFoundException('Project not found');
+    const ver = project.frmrVersionId
+      ? await this.verRepo.findOne({ where: { id: project.frmrVersionId } })
+      : await this.verRepo.find({
+          order: { ingestedAt: 'DESC' },
+          take: 1,
+        }).then((rows) => rows[0] ?? null);
+    if (!ver) return 0;
+    let release = await this.frmrCatalogSync.getReleaseForFrmrVersion(ver.id);
+    if (!release) {
+      await this.frmrCatalogSync.syncFromFrmrVersion(ver.id);
+      release = await this.frmrCatalogSync.getReleaseForFrmrVersion(ver.id);
+    }
+    if (!release) return 0;
+
+    const items = await this.itemRepo.find({ where: { projectId } });
+    let updated = 0;
+    for (const it of items) {
+      if (it.catalogRequirementId) continue;
+      if (it.frrRequirementId) {
+        const cr = await this.frmrCatalogSync.findCatalogRequirementForFrr(
+          release.id,
+          it.frrRequirementId,
+        );
+        if (cr) {
+          it.catalogRequirementId = cr.id;
+          updated++;
+        }
+      } else if (it.ksiIndicatorId) {
+        const cr = await this.frmrCatalogSync.findCatalogRequirementForKsi(
+          release.id,
+          it.ksiIndicatorId,
+        );
+        if (cr) {
+          it.catalogRequirementId = cr.id;
+          updated++;
+        }
+      }
+    }
+    if (updated) await this.itemRepo.save(items);
+    return updated;
   }
 
   async applySuggestedDueDates(

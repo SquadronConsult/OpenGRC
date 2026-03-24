@@ -6,6 +6,7 @@ import {
   Param,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { FrmrIngestionService } from './frmr-ingestion.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/roles.guard';
@@ -15,7 +16,14 @@ import { FrdTerm } from '../entities/frd-term.entity';
 import { FrrRequirement } from '../entities/frr-requirement.entity';
 import { KsiIndicator } from '../entities/ksi-indicator.entity';
 import { FrmrVersion } from '../entities/frmr-version.entity';
+import {
+  FrmrKsiQueryDto,
+  FrmrRequirementQueryDto,
+  FrmrTermQueryDto,
+} from './dto/frmr-list-query.dto';
+import { MAX_LIST_LIMIT, skipTakeFromPageLimit } from '../common/dto/page-limit-query.dto';
 
+@ApiTags('frmr')
 @Controller('frmr')
 export class FrmrController {
   constructor(
@@ -27,6 +35,8 @@ export class FrmrController {
   ) {}
 
   @Post('ingest')
+  @ApiOperation({ summary: 'Trigger FRMR ingest (admin)' })
+  @ApiBearerAuth('bearer')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   async triggerIngest() {
@@ -34,61 +44,84 @@ export class FrmrController {
   }
 
   @Get('versions')
+  @ApiOperation({ summary: 'List FRMR versions' })
   async versions() {
     return this.frmrIngest.listVersions();
   }
 
   @Get('terms')
-  async termList(
-    @Query('q') q?: string,
-    @Query('limit') limit = '100',
-    @Query('offset') offset = '0',
-  ) {
+  @ApiOperation({ summary: 'Search FRMR terms (paginated; default limit 100)' })
+  async termList(@Query() query: FrmrTermQueryDto) {
     const v = await this.frmrIngest.getLatestVersion();
-    if (!v) return { items: [], total: 0 };
+    if (!v) {
+      return { items: [], total: 0, page: 1, limit: 100, hasMore: false };
+    }
+    const paging = skipTakeFromPageLimit({
+      ...query,
+      limit: query.limit ?? 100,
+      page: query.page,
+    });
     const qb = this.terms
       .createQueryBuilder('t')
       .where('t.version_id = :vid', { vid: v.id });
-    if (q) {
+    if (query.q) {
       qb.andWhere(
         '(t.term ILIKE :q OR t.stable_id ILIKE :q OR t.definition ILIKE :q)',
-        { q: `%${q}%` },
+        { q: `%${query.q}%` },
       );
     }
     const total = await qb.getCount();
     const items = await qb
       .orderBy('t.term', 'ASC')
-      .take(+limit)
-      .skip(+offset)
+      .skip(paging.skip)
+      .take(paging.take)
       .getMany();
-    return { items, total, versionId: v.id };
+    return {
+      items,
+      total,
+      page: paging.page,
+      limit: paging.take,
+      hasMore: paging.page * paging.take < total,
+      versionId: v.id,
+    };
   }
 
   @Get('requirements')
-  async requirements(
-    @Query('process') process?: string,
-    @Query('layer') layer?: string,
-    @Query('limit') limit = '200',
-    @Query('offset') offset = '0',
-  ) {
+  @ApiOperation({ summary: 'List FRMR requirements (paginated; default limit 200)' })
+  async requirements(@Query() query: FrmrRequirementQueryDto) {
     const v = await this.frmrIngest.getLatestVersion();
-    if (!v) return { items: [], total: 0 };
+    if (!v) {
+      return { items: [], total: 0, page: 1, limit: 200, hasMore: false };
+    }
+    const paging = skipTakeFromPageLimit({
+      ...query,
+      limit: query.limit ?? 200,
+      page: query.page,
+    });
     const qb = this.frr
       .createQueryBuilder('r')
       .where('r.version_id = :vid', { vid: v.id });
-    if (process) qb.andWhere('r.process_id = :p', { p: process });
-    if (layer) qb.andWhere('r.layer = :l', { l: layer });
+    if (query.process) qb.andWhere('r.process_id = :p', { p: query.process });
+    if (query.layer) qb.andWhere('r.layer = :l', { l: query.layer });
     const total = await qb.getCount();
     const items = await qb
       .orderBy('r.process_id', 'ASC')
       .addOrderBy('r.req_key', 'ASC')
-      .take(+limit)
-      .skip(+offset)
+      .skip(paging.skip)
+      .take(paging.take)
       .getMany();
-    return { items, total, versionId: v.id };
+    return {
+      items,
+      total,
+      page: paging.page,
+      limit: paging.take,
+      hasMore: paging.page * paging.take < total,
+      versionId: v.id,
+    };
   }
 
   @Get('taxonomy')
+  @ApiOperation({ summary: 'FRMR taxonomy snapshot' })
   async taxonomy(
     @Query('pathType') pathType?: '20x' | 'rev5',
     @Query('layer') layer?: 'both' | '20x' | 'rev5',
@@ -193,38 +226,56 @@ export class FrmrController {
   }
 
   @Get('ksi')
-  async ksiList(
-    @Query('domain') domain?: string,
-    @Query('limit') limit = '200',
-    @Query('offset') offset = '0',
-  ) {
+  @ApiOperation({ summary: 'List KSI indicators (paginated; default limit 200)' })
+  async ksiList(@Query() query: FrmrKsiQueryDto) {
     const v = await this.frmrIngest.getLatestVersion();
-    if (!v) return { items: [], total: 0 };
+    if (!v) {
+      return { items: [], total: 0, page: 1, limit: 200, hasMore: false };
+    }
+    const paging = skipTakeFromPageLimit({
+      ...query,
+      limit: query.limit ?? 200,
+      page: query.page,
+    });
     const qb = this.ksi
       .createQueryBuilder('k')
       .where('k.version_id = :vid', { vid: v.id });
-    if (domain) qb.andWhere('k.domain_code = :d', { d: domain });
+    if (query.domain) qb.andWhere('k.domain_code = :d', { d: query.domain });
     const total = await qb.getCount();
     const items = await qb
       .orderBy('k.domain_code', 'ASC')
-      .take(+limit)
-      .skip(+offset)
+      .skip(paging.skip)
+      .take(paging.take)
       .getMany();
-    return { items, total, versionId: v.id };
+    return {
+      items,
+      total,
+      page: paging.page,
+      limit: paging.take,
+      hasMore: paging.page * paging.take < total,
+      versionId: v.id,
+    };
   }
 
   @Get('mappings/nist/:control')
+  @ApiOperation({
+    summary: 'Map NIST control to KSI',
+    description: `Filters KSI rows for a version match; response is capped at ${MAX_LIST_LIMIT} items.`,
+  })
   async nistMap(@Param('control') control: string) {
     const v = await this.frmrIngest.getLatestVersion();
     if (!v) return [];
     const c = control.toLowerCase().replace(/^([a-z]{2})-(\d+)/i, (_, a, n) => `${a}-${n}`);
     const all = await this.ksi.find({ where: { versionId: v.id } });
-    return all.filter((k) =>
-      (k.controls || []).some((x) => String(x).toLowerCase() === c),
-    );
+    return all
+      .filter((k) =>
+        (k.controls || []).some((x) => String(x).toLowerCase() === c),
+      )
+      .slice(0, MAX_LIST_LIMIT);
   }
 
   @Get('diff/:from/:to')
+  @ApiOperation({ summary: 'Diff two FRMR versions' })
   async diff(@Param('from') from: string, @Param('to') to: string) {
     const [a, b] = await Promise.all([
       this.frr.find({ where: { versionId: from } }),

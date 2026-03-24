@@ -8,6 +8,9 @@ function parseList(value, fallback = []) {
     .filter(Boolean);
 }
 
+/** Bumped when MCP tool schemas or capability contract changes in a breaking way. */
+export const MCP_PROTOCOL_VERSION = process.env.MCP_PROTOCOL_VERSION || '1.0.0';
+
 export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
   workspaceRoot: path.resolve(process.env.MCP_WORKSPACE_ROOT || process.cwd()),

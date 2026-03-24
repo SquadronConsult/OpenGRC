@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { createHmac } from 'crypto';
 import { Repository } from 'typeorm';
 import { WebhookSubscription } from '../entities/webhook-subscription.entity';
+import { toPaginated } from '../common/pagination/paginated-result';
 
 @Injectable()
 export class WebhooksService {
@@ -50,5 +51,19 @@ export class WebhooksService {
 
   list(projectId?: string) {
     return this.repo.find({ where: projectId ? { projectId } : {} });
+  }
+
+  listPaginated(
+    projectId: string | undefined,
+    paging: { skip: number; take: number; page: number; limit: number },
+  ) {
+    const qb = this.repo.createQueryBuilder('w');
+    if (projectId) qb.where('w.projectId = :pid', { pid: projectId });
+    return qb
+      .orderBy('w.id', 'ASC')
+      .skip(paging.skip)
+      .take(paging.take)
+      .getManyAndCount()
+      .then(([items, total]) => toPaginated(items, paging.page, paging.limit, total));
   }
 }

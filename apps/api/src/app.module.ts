@@ -1,5 +1,7 @@
 import { Module, OnApplicationBootstrap, Logger } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
@@ -20,6 +22,7 @@ import { Comment } from './entities/comment.entity';
 import { HealthController } from './health/health.controller';
 import { AuthService } from './auth/auth.service';
 import { RolesGuard } from './auth/roles.guard';
+import { AuthModule } from './auth/auth.module';
 import { FrmrController } from './frmr/frmr.controller';
 import { FrmrParserService } from './frmr/frmr-parser.service';
 import { FrmrIngestionService } from './frmr/frmr-ingestion.service';
@@ -42,6 +45,30 @@ import { AuditService } from './audit/audit.service';
 import { entities } from './db/entities';
 import { AutoScopeController } from './auto-scope/auto-scope.controller';
 import { AutoScopeService } from './auto-scope/auto-scope.service';
+import { PoamService } from './poam/poam.service';
+import { ProjectSnapshotService } from './project-snapshots/project-snapshot.service';
+import { CatalogController } from './catalog/catalog.controller';
+import { FrmrCatalogSyncService } from './catalog/frmr-catalog-sync.service';
+import { CatalogPackageService } from './catalog/catalog-package.service';
+import { ConnectorsController } from './connectors/connectors.controller';
+import { ConnectorRegistry } from './connectors/connector-registry';
+import { ConnectorOrchestratorService } from './connectors/connector-orchestrator.service';
+import { ConnectorInstanceService } from './connectors/connector-instance.service';
+import { ConnectorSchedulerService } from './connectors/connector-scheduler.service';
+import { SyntheticConnector } from './connectors/impl/synthetic.connector';
+import { GithubConnector } from './connectors/impl/github.connector';
+import { GitlabConnector } from './connectors/impl/gitlab.connector';
+import { AwsCloudTrailConnector } from './connectors/impl/aws-cloudtrail.connector';
+import { AwsConfigConnector } from './connectors/impl/aws-config.connector';
+import { OktaConnector } from './connectors/impl/okta.connector';
+import { EntraConnector } from './connectors/impl/entra.connector';
+import { JiraConnector } from './connectors/impl/jira.connector';
+import { LinearConnector } from './connectors/impl/linear.connector';
+import { SlackConnector } from './connectors/impl/slack.connector';
+import { TeamsConnector } from './connectors/impl/teams.connector';
+import { RisksController } from './risks/risks.controller';
+import { RiskService } from './risks/risk.service';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 function resolveSqlitePath(): string {
   const explicit = process.env.SQLITE_PATH;
@@ -51,6 +78,9 @@ function resolveSqlitePath(): string {
 }
 
 function buildTypeOrmConfig() {
+  const sync = process.env.DB_SYNC !== 'false';
+  const runMigrations = process.env.DB_MIGRATIONS_RUN === 'true';
+  const migrations = [join(__dirname, 'migrations', '*.{ts,js}')];
   const dbType = process.env.DB_TYPE || 'sqlite';
   if (dbType === 'postgres') {
     return {
@@ -61,7 +91,9 @@ function buildTypeOrmConfig() {
       password: process.env.DB_PASSWORD || 'grc',
       database: process.env.DB_NAME || 'grc',
       entities,
-      synchronize: process.env.DB_SYNC !== 'false',
+      synchronize: sync,
+      migrations: runMigrations ? migrations : [],
+      migrationsRun: runMigrations,
       logging: process.env.DB_LOG === 'true',
     };
   }
@@ -70,7 +102,9 @@ function buildTypeOrmConfig() {
     type: 'sqlite' as const,
     database: resolveSqlitePath(),
     entities,
-    synchronize: process.env.DB_SYNC !== 'false',
+    synchronize: sync,
+    migrations: runMigrations ? migrations : [],
+    migrationsRun: runMigrations,
     logging: process.env.DB_LOG === 'true',
   };
 }
@@ -79,6 +113,30 @@ function buildTypeOrmConfig() {
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        throttlers: [
+          {
+            ttl: parseInt(config.get<string>('API_THROTTLE_TTL_MS') || '60000', 10),
+            limit: parseInt(config.get<string>('API_THROTTLE_LIMIT') || '120', 10),
+          },
+        ],
+        skipIf: (ctx) => {
+          const req = ctx.switchToHttp().getRequest<{ url?: string }>();
+          const url = req.url || '';
+          return (
+            url.startsWith('/health') ||
+            url.startsWith('/docs') ||
+            url.startsWith('/docs-json') ||
+            url.startsWith('/integrations/')
+          );
+        },
+      }),
+    }),
+    AuthModule,
+    DashboardModule,
     TypeOrmModule.forRoot(buildTypeOrmConfig()),
     TypeOrmModule.forFeature(entities),
   ],
@@ -94,12 +152,17 @@ function buildTypeOrmConfig() {
     WebhooksController,
     NotificationsController,
     AutoScopeController,
+    CatalogController,
+    ConnectorsController,
+    RisksController,
   ],
   providers: [
-    AuthService,
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     RolesGuard,
     FrmrParserService,
     FrmrIngestionService,
+    FrmrCatalogSyncService,
+    CatalogPackageService,
     ChecklistService,
     StorageService,
     WebhooksService,
@@ -109,6 +172,24 @@ function buildTypeOrmConfig() {
     ProjectsService,
     AutoScopeService,
     IntegrationEvidenceService,
+    PoamService,
+    ProjectSnapshotService,
+    SyntheticConnector,
+    GithubConnector,
+    GitlabConnector,
+    AwsCloudTrailConnector,
+    AwsConfigConnector,
+    OktaConnector,
+    EntraConnector,
+    JiraConnector,
+    LinearConnector,
+    SlackConnector,
+    TeamsConnector,
+    ConnectorRegistry,
+    ConnectorOrchestratorService,
+    ConnectorInstanceService,
+    ConnectorSchedulerService,
+    RiskService,
   ],
 })
 export class AppModule implements OnApplicationBootstrap {

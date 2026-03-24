@@ -1,7 +1,20 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Search, FileText } from 'lucide-react';
 import { api } from '@/lib/api';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/compliance/EmptyState';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 type Req = {
   id: string;
@@ -13,85 +26,96 @@ type Req = {
   primaryKeyWord: string;
 };
 
-const keywordColors: Record<string, string> = {
-  SHALL: 'badge-red',
-  SHOULD: 'badge-yellow',
-  MAY: 'badge-blue',
+const keywordVariant: Record<string, 'destructive' | 'secondary' | 'default'> = {
+  SHALL: 'destructive',
+  SHOULD: 'secondary',
+  MAY: 'default',
 };
 
 export default function RequirementsPage() {
   const [process, setProcess] = useState('');
   const [items, setItems] = useState<Req[]>([]);
   const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     const q = process ? `&process=${encodeURIComponent(process)}` : '';
     api<{ items: Req[]; total: number }>(`/frmr/requirements?limit=100${q}`)
       .then((d) => { setItems(d.items); setTotal(d.total ?? d.items.length); })
-      .catch(() => { setItems([]); setTotal(0); });
+      .catch(() => { setItems([]); setTotal(0); })
+      .finally(() => setLoading(false));
   }, [process]);
 
   return (
-    <div className="animate-in">
-      <div className="page-header">
+    <div className="animate-in fade-in duration-300">
+      <div className="flex justify-between items-start gap-4 flex-wrap mb-7">
         <div>
-          <h1>FRR Requirements</h1>
-          <p className="page-desc" style={{ marginBottom: 0 }}>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">FRR Requirements</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             FedRAMP Requirements &amp; Recommendations. Filter by process area to narrow results.
           </p>
         </div>
-        <span className="badge" style={{ fontSize: '0.72rem', padding: '0.3rem 0.7rem' }}>{total} requirements</span>
+        <Badge variant="secondary">{total} requirements</Badge>
       </div>
 
-      <div style={{ marginBottom: '1.25rem' }}>
-        <input
-          className="form-input"
+      <div className="relative mb-5 max-w-xs">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+        <Input
           value={process}
           onChange={(e) => setProcess(e.target.value.toUpperCase())}
           placeholder="Filter by process (ADS, PVA, VDR...)"
-          style={{ maxWidth: 320 }}
+          className="pl-8"
+          aria-label="Filter requirements by process"
         />
       </div>
 
-      {items.length === 0 ? (
-        <div className="empty-state">
-          <p>No requirements found. Ingest FRMR data or adjust your filter.</p>
+      {loading ? (
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-full" />
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full" />
+          ))}
         </div>
+      ) : items.length === 0 ? (
+        <EmptyState
+          icon={FileText}
+          title="No requirements found"
+          description="Ingest FRMR data or adjust your filter."
+        />
       ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th style={{ width: 85 }}>Process</th>
-                <th style={{ width: 75 }}>Layer</th>
-                <th style={{ width: 100 }}>Actor</th>
-                <th style={{ width: 90 }}>ID</th>
-                <th style={{ width: 85 }}>Keyword</th>
-                <th>Statement</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((r) => (
-                <tr key={r.id}>
-                  <td><span style={{ fontWeight: 600, color: 'var(--text)' }}>{r.processId}</span></td>
-                  <td className="text-sm">{r.layer}</td>
-                  <td className="text-sm">{r.actorLabel}</td>
-                  <td><span className="text-xs text-dim">{r.reqKey}</span></td>
-                  <td>
-                    <span className={`badge ${keywordColors[r.primaryKeyWord?.toUpperCase()] || ''}`}>
-                      {r.primaryKeyWord}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ maxWidth: 420, fontSize: '0.82rem', lineHeight: 1.55 }}>
-                      {r.statement.length > 240 ? r.statement.slice(0, 240) + '...' : r.statement}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-20">Process</TableHead>
+              <TableHead className="w-[4.5rem]">Layer</TableHead>
+              <TableHead className="w-24">Actor</TableHead>
+              <TableHead className="w-[5.5rem]">ID</TableHead>
+              <TableHead className="w-20">Keyword</TableHead>
+              <TableHead>Statement</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((r) => (
+              <TableRow key={r.id}>
+                <TableCell className="font-semibold text-foreground">{r.processId}</TableCell>
+                <TableCell className="text-sm">{r.layer}</TableCell>
+                <TableCell className="text-sm">{r.actorLabel}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">{r.reqKey}</TableCell>
+                <TableCell>
+                  <Badge variant={keywordVariant[r.primaryKeyWord?.toUpperCase()] ?? 'outline'}>
+                    {r.primaryKeyWord}
+                  </Badge>
+                </TableCell>
+                <TableCell className="whitespace-normal">
+                  <div className="max-w-md text-[0.82rem] leading-relaxed">
+                    {r.statement.length > 240 ? r.statement.slice(0, 240) + '...' : r.statement}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
     </div>
   );

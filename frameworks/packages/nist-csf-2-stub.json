@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "framework": {
+    "code": "nist_csf_2",
+    "name": "NIST Cybersecurity Framework 2.0",
+    "description": "Stub package for catalog import tests; replace with full CSF content."
+  },
+  "release": { "releaseCode": "2.0", "label": "CSF 2.0" },
+  "controls": [
+    { "controlCode": "GV", "title": "Govern" },
+    { "controlCode": "ID", "title": "Identify" }
+  ],
+  "requirements": [
+    {
+      "controlCode": "GV",
+      "requirementCode": "GV.OC-01",
+      "statement": "Organizational cybersecurity risk management strategy expectations are established and communicated."
+    }
+  ]
+}

@@ -1,4 +1,6 @@
 /* eslint-disable no-console */
+import { loginBearer } from './login-bearer.mjs';
+
 const API_URL = process.env.API_URL || 'http://localhost:3000';
 
 async function call(path, init = {}) {
@@ -13,7 +15,9 @@ async function call(path, init = {}) {
 }
 
 async function run() {
-  const auth = { 'content-type': 'application/json' };
+  const token = await loginBearer(API_URL);
+  const bearer = { authorization: `Bearer ${token}` };
+  const auth = { 'content-type': 'application/json', ...bearer };
 
   const project = await call('/projects', {
     method: 'POST',
@@ -44,10 +48,9 @@ async function run() {
     throw new Error('Auto-scope run did not generate recommendations');
   }
 
-  const recs = await call(
-    `/projects/${project.id}/auto-scope/recommendations?status=pending_review`,
-    {},
-  );
+  const recs = await call(`/projects/${project.id}/auto-scope/recommendations?status=pending_review`, {
+    headers: bearer,
+  });
   if (!Array.isArray(recs.items) || recs.items.length === 0) {
     throw new Error('No pending recommendations returned');
   }
@@ -63,7 +66,7 @@ async function run() {
   );
 
   const checklist = await call(`/projects/${project.id}/checklist`, {
-    headers: {},
+    headers: bearer,
   });
   if (!checklist.some((x) => x.reviewState === 'scoped_approved')) {
     throw new Error('Checklist item reviewState not updated after approval');

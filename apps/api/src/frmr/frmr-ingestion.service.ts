@@ -10,6 +10,7 @@ import { KsiIndicator } from '../entities/ksi-indicator.entity';
 import { access, readFile } from 'fs/promises';
 import { constants } from 'fs';
 import { join } from 'path';
+import { FrmrCatalogSyncService } from '../catalog/frmr-catalog-sync.service';
 
 const DEFAULT_URL =
   'https://raw.githubusercontent.com/FedRAMP/docs/main/FRMR.documentation.json';
@@ -25,6 +26,7 @@ export class FrmrIngestionService {
 
   constructor(
     private readonly parser: FrmrParserService,
+    private readonly frmrCatalogSync: FrmrCatalogSyncService,
     @InjectRepository(FrmrVersion)
     private readonly verRepo: Repository<FrmrVersion>,
     @InjectRepository(FrdTerm)
@@ -53,6 +55,9 @@ export class FrmrIngestionService {
     });
     if (existing) {
       this.log.log(`FRMR checksum unchanged, skipping duplicate ingest`);
+      await this.frmrCatalogSync.syncFromFrmrVersion(existing.id).catch((e) => {
+        this.log.warn(`FRMR catalog sync failed: ${e}`);
+      });
       return existing;
     }
 
@@ -127,6 +132,9 @@ export class FrmrIngestionService {
     this.log.log(
       `Ingested FRMR ${ver.frmrRelease} terms=${terms.length} frr=${frr.length} ksi=${ksiRows.length}`,
     );
+    await this.frmrCatalogSync.syncFromFrmrVersion(ver.id).catch((e) => {
+      this.log.warn(`FRMR catalog sync failed: ${e}`);
+    });
     return ver;
   }
 

@@ -19,6 +19,21 @@ import { ReviewDecision } from '../entities/review-decision.entity';
 import { IntegrationCredential } from '../entities/integration-credential.entity';
 import { IntegrationControlLink } from '../entities/integration-control-link.entity';
 import { IntegrationIdempotency } from '../entities/integration-idempotency.entity';
+import { PoamEntry } from '../entities/poam-entry.entity';
+import { ProjectSnapshot } from '../entities/project-snapshot.entity';
+import { Framework } from '../entities/framework.entity';
+import { FrameworkRelease } from '../entities/framework-release.entity';
+import { CatalogControl } from '../entities/catalog-control.entity';
+import { CatalogRequirement } from '../entities/catalog-requirement.entity';
+import { InternalControl } from '../entities/internal-control.entity';
+import { InternalControlMapping } from '../entities/internal-control-mapping.entity';
+import { IntegrationConnectorInstance } from '../entities/integration-connector-instance.entity';
+import { IntegrationConnectorRun } from '../entities/integration-connector-run.entity';
+import { Risk } from '../entities/risk.entity';
+import { RiskChecklistMitigation } from '../entities/risk-checklist-mitigation.entity';
+import { RiskInternalControlMitigation } from '../entities/risk-internal-control-mitigation.entity';
+import { RiskAcceptanceRequest } from '../entities/risk-acceptance-request.entity';
+import { RiskAcceptanceStep } from '../entities/risk-acceptance-step.entity';
 
 export const entities = [
   User,
@@ -42,4 +57,19 @@ export const entities = [
   IntegrationCredential,
   IntegrationControlLink,
   IntegrationIdempotency,
+  PoamEntry,
+  ProjectSnapshot,
+  Framework,
+  FrameworkRelease,
+  CatalogControl,
+  CatalogRequirement,
+  InternalControl,
+  InternalControlMapping,
+  IntegrationConnectorInstance,
+  IntegrationConnectorRun,
+  Risk,
+  RiskChecklistMitigation,
+  RiskInternalControlMitigation,
+  RiskAcceptanceRequest,
+  RiskAcceptanceStep,
 ];

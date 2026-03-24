@@ -11,39 +11,78 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOkResponse,
+  ApiOperation,
+  ApiProduces,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { Response } from 'express';
 import { ExportService } from '../export/export.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ProjectsService } from './projects.service';
 import { ChecklistService } from '../checklist/checklist.service';
 import { AuditService } from '../audit/audit.service';
+import { PoamService } from '../poam/poam.service';
+import { ProjectSnapshotService } from '../project-snapshots/project-snapshot.service';
+import { ConnectorInstanceService } from '../connectors/connector-instance.service';
+import {
+  AddProjectMemberRequestDto,
+  CreateProjectRequestDto,
+  CreateProjectSnapshotRequestDto,
+  GenerateChecklistRequestDto,
+} from './dto/project-requests.dto';
+import {
+  ChecklistListQueryDto,
+  EvidenceGapsQueryDto,
+  ProjectListQueryDto,
+} from './dto/list-query.dto';
+import { skipTakeFromPageLimit } from '../common/dto/page-limit-query.dto';
+import { parseSortParam } from '../common/sort/parse-sort';
 
+@ApiTags('projects')
 @Controller('projects')
 @UseGuards(JwtAuthGuard)
+@ApiBearerAuth('bearer')
 export class ProjectsController {
   constructor(
     private readonly projects: ProjectsService,
     private readonly checklistSvc: ChecklistService,
     private readonly audit: AuditService,
     private readonly exportSvc: ExportService,
+    private readonly poamSvc: PoamService,
+    private readonly snapshots: ProjectSnapshotService,
+    private readonly connectors: ConnectorInstanceService,
   ) {}
 
   @Get()
-  list(@Req() req: { user: { userId: string; role: string } }) {
-    return this.projects.listForUser(req.user.userId, req.user.role);
+  @ApiOperation({ summary: 'List projects for current user (paginated)' })
+  list(
+    @Req() req: { user: { userId: string; role: string } },
+    @Query() q: ProjectListQueryDto,
+  ) {
+    const { page, limit, skip, take } = skipTakeFromPageLimit(q);
+    const sort = parseSortParam(q.sort, {
+      createdAt: 'p.created_at',
+      name: 'p.name',
+      pathType: 'p.path_type',
+    }, 'createdAt');
+    return this.projects.listForUserPaginated(
+      req.user.userId,
+      req.user.role,
+      { skip, take, page, limit },
+      sort,
+    );
   }
 
   @Post()
+  @ApiOperation({ summary: 'Create project' })
   async create(
     @Req() req: { user: { userId: string } },
-    @Body()
-    b: {
-      name: string;
-      pathType: '20x' | 'rev5';
-      impactLevel: 'low' | 'moderate' | 'high';
-      actorLabels?: string;
-      complianceStartDate?: string;
-    },
+    @Body() b: CreateProjectRequestDto,
   ) {
     const p = await this.projects.create(req.user.userId, b);
     let checklistCreated = 0;
@@ -74,6 +113,20 @@ export class ProjectsController {
   }
 
   @Get(':id/export')
+  @ApiOperation({
+    summary: 'Export project',
+    description:
+      'Response content-type varies: JSON (default), `text/markdown` for md/markdown, or OSCAL JSON for oscal-ssp.',
+  })
+  @ApiProduces('application/json', 'text/markdown; charset=utf-8')
+  @ApiQuery({
+    name: 'format',
+    required: false,
+    description: 'json (default), md, markdown, oscal-ssp',
+  })
+  @ApiOkResponse({
+    description: 'JSON bundle, markdown body, or OSCAL SSP JSON',
+  })
   async exportProject(
     @Param('id') id: string,
     @Query('format') format: string,
@@ -96,6 +149,18 @@ export class ProjectsController {
   }
 
   @Get(':id/poam')
+  @ApiOperation({
+    summary: 'Export POA&M',
+    description:
+      'JSON (default), CSV or markdown with appropriate Content-Type, or OSCAL POA&M JSON.',
+  })
+  @ApiProduces('application/json', 'text/csv; charset=utf-8', 'text/markdown; charset=utf-8')
+  @ApiQuery({
+    name: 'format',
+    required: false,
+    description: 'json (default), csv, md, markdown, oscal-poam',
+  })
+  @ApiOkResponse({ description: 'POA&M in requested format' })
   async exportPoam(
     @Param('id') id: string,
     @Query('format') format: string,
@@ -123,19 +188,12 @@ export class ProjectsController {
     return res.json(json);
   }
 
-  @Get(':id')
-  get(
-    @Param('id') id: string,
-    @Req() req: { user: { userId: string; role: string } },
-  ) {
-    return this.projects.get(id, req.user.userId, req.user.role);
-  }
-
   @Post(':id/members')
+  @ApiOperation({ summary: 'Add project member' })
   addMember(
     @Param('id') id: string,
     @Req() req: { user: { userId: string; role: string } },
-    @Body() b: { email: string; role: string },
+    @Body() b: AddProjectMemberRequestDto,
   ) {
     return this.projects.addMember(
       id,
@@ -147,10 +205,11 @@ export class ProjectsController {
   }
 
   @Post(':id/checklist/generate')
+  @ApiOperation({ summary: 'Generate checklist' })
   async genChecklist(
     @Param('id') id: string,
     @Req() req: { user: { userId: string; role: string } },
-    @Body() b: { includeKsi?: boolean },
+    @Body() b: GenerateChecklistRequestDto,
   ) {
     await this.projects.assertAccess(id, req.user.userId, req.user.role);
     const n = await this.checklistSvc.generateChecklist(
@@ -160,16 +219,152 @@ export class ProjectsController {
     return { created: n };
   }
 
-  @Get(':id/checklist')
-  async getChecklist(
+  @Post(':id/checklist/backfill-catalog')
+  @ApiOperation({ summary: 'Backfill catalog requirement links' })
+  async backfillCatalog(
     @Param('id') id: string,
     @Req() req: { user: { userId: string; role: string } },
   ) {
     await this.projects.assertAccess(id, req.user.userId, req.user.role);
-    return this.checklistSvc.listChecklist(id);
+    const updated = await this.checklistSvc.backfillCatalogRequirementLinks(id);
+    return { updated };
+  }
+
+  @Get(':id/checklist')
+  @ApiOperation({ summary: 'Get project checklist (paginated)' })
+  async getChecklist(
+    @Param('id') id: string,
+    @Req() req: { user: { userId: string; role: string } },
+    @Query() q: ChecklistListQueryDto,
+  ) {
+    await this.projects.assertAccess(id, req.user.userId, req.user.role);
+    const { page, limit } = skipTakeFromPageLimit(q);
+    return this.checklistSvc.listChecklistPaginated(id, page, limit, q.sort);
+  }
+
+  /** Controls with no attached evidence (assessor-style gap list). */
+  @Get(':id/gaps/evidence')
+  @ApiOperation({ summary: 'Evidence gap summary (paginated gap items)' })
+  async evidenceGaps(
+    @Param('id') id: string,
+    @Req() req: { user: { userId: string; role: string } },
+    @Query() q: EvidenceGapsQueryDto,
+  ) {
+    await this.projects.assertAccess(id, req.user.userId, req.user.role);
+    const { page, limit } = skipTakeFromPageLimit(q);
+    const staleDays = q.staleDays ?? 30;
+    const report = await this.checklistSvc.getEvidenceGapsReport(
+      id,
+      page,
+      limit,
+      staleDays,
+    );
+    const connectorStatus = await this.connectors.projectConnectorStatus(
+      id,
+      req.user.userId,
+      req.user.role,
+    );
+    return {
+      ...report,
+      connectorSummary: connectorStatus.banner,
+    };
+  }
+
+  @Post(':id/poam/sync-from-checklist')
+  @ApiOperation({ summary: 'Sync POA&M from checklist' })
+  async syncPoamFromChecklist(
+    @Param('id') id: string,
+    @Req() req: { user: { userId: string; role: string } },
+  ) {
+    await this.projects.assertAccess(id, req.user.userId, req.user.role);
+    const r = await this.poamSvc.syncFromChecklist(id);
+    await this.audit.log(req.user.userId, 'poam.sync', 'project', id, r);
+    return r;
+  }
+
+  @Delete(':id/poam/stored')
+  @ApiOperation({ summary: 'Clear stored POA&M' })
+  async clearStoredPoam(
+    @Param('id') id: string,
+    @Req() req: { user: { userId: string; role: string } },
+  ) {
+    await this.projects.assertAccess(id, req.user.userId, req.user.role);
+    const r = await this.poamSvc.clearStored(id);
+    await this.audit.log(req.user.userId, 'poam.clear_stored', 'project', id, r);
+    return r;
+  }
+
+  @Post(':id/snapshots')
+  @ApiOperation({ summary: 'Create project snapshot' })
+  async createSnapshot(
+    @Param('id') id: string,
+    @Req() req: { user: { userId: string; role: string } },
+    @Body() b: CreateProjectSnapshotRequestDto,
+  ) {
+    await this.projects.assertAccess(id, req.user.userId, req.user.role);
+    const row = await this.snapshots.create(
+      id,
+      b.title,
+      b.kind || 'manual',
+      b.payload,
+    );
+    await this.audit.log(req.user.userId, 'snapshot.create', 'project_snapshot', row.id, {
+      projectId: id,
+    });
+    return row;
+  }
+
+  @Get(':id/snapshots')
+  @ApiOperation({ summary: 'List project snapshots' })
+  async listSnapshots(
+    @Param('id') id: string,
+    @Req() req: { user: { userId: string; role: string } },
+  ) {
+    await this.projects.assertAccess(id, req.user.userId, req.user.role);
+    return this.snapshots.list(id);
+  }
+
+  /** Store an OSCAL SSP JSON fragment for traceability (round-trip foundation). */
+  @Post(':id/oscal/import-ssp')
+  @ApiOperation({ summary: 'Import OSCAL SSP JSON' })
+  @ApiBody({
+    description:
+      'JSON object containing `system-security-plan`, `ssp`, or a root SSP object.',
+    schema: { type: 'object', additionalProperties: true },
+  })
+  async importOscalSsp(
+    @Param('id') id: string,
+    @Req() req: { user: { userId: string; role: string } },
+    @Body() body: Record<string, unknown>,
+  ) {
+    await this.projects.assertAccess(id, req.user.userId, req.user.role);
+    const ssp = body['system-security-plan'] || body['ssp'] || body;
+    if (!ssp || typeof ssp !== 'object') {
+      return { ok: false, message: 'Expected JSON with system-security-plan, ssp, or a root SSP object.' };
+    }
+    const row = await this.snapshots.create(
+      id,
+      `OSCAL SSP import ${new Date().toISOString().slice(0, 10)}`,
+      'oscal_import',
+      { importedAt: new Date().toISOString(), systemSecurityPlan: ssp },
+    );
+    await this.audit.log(req.user.userId, 'oscal.import_ssp', 'project_snapshot', row.id, {
+      projectId: id,
+    });
+    return { ok: true, snapshotId: row.id };
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get project by id' })
+  get(
+    @Param('id') id: string,
+    @Req() req: { user: { userId: string; role: string } },
+  ) {
+    return this.projects.get(id, req.user.userId, req.user.role);
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete project' })
   async remove(
     @Param('id') id: string,
     @Req() req: { user: { userId: string; role: string } },

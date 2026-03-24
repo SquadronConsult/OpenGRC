@@ -3,6 +3,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import type { SortOrder } from '../common/sort/parse-sort';
+import { toPaginated } from '../common/pagination/paginated-result';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Project } from '../entities/project.entity';
@@ -32,6 +34,12 @@ export class ProjectsService {
       where: { projectId, userId },
     });
     if (!m) throw new ForbiddenException('No access to project');
+  }
+
+  /** Used when the caller was authenticated with a project integration key (no JWT user). */
+  async ensureProjectExists(projectId: string) {
+    const p = await this.proj.findOne({ where: { id: projectId } });
+    if (!p) throw new NotFoundException('Project not found');
   }
 
   async create(
@@ -73,6 +81,31 @@ export class ProjectsService {
       .where('p.id IN (:...ids)', { ids })
       .orderBy('p.created_at', 'DESC')
       .getMany();
+  }
+
+  async listForUserPaginated(
+    userId: string,
+    role: string,
+    paging: { skip: number; take: number; page: number; limit: number },
+    sort: { column: string; order: SortOrder },
+  ) {
+    let qb = this.proj.createQueryBuilder('p');
+    if (role !== 'admin') {
+      const mids = await this.mem.find({ where: { userId } });
+      const ids = mids.map((m) => m.projectId);
+      if (!ids.length) {
+        return toPaginated([], paging.page, paging.limit, 0);
+      }
+      qb = qb.where('p.id IN (:...ids)', { ids });
+    }
+    const total = await qb.getCount();
+    const rows = await qb
+      .clone()
+      .orderBy(sort.column, sort.order)
+      .skip(paging.skip)
+      .take(paging.take)
+      .getMany();
+    return toPaginated(rows, paging.page, paging.limit, total);
   }
 
   async get(projectId: string, userId: string, role: string) {

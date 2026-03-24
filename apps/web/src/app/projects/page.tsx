@@ -3,7 +3,26 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api';
+import { FolderOpen, Plus, ShieldCheck, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { api, listItems, type PaginatedList } from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { EmptyState } from '@/components/compliance/EmptyState';
+import { ProgressRing } from '@/components/compliance/ProgressRing';
 
 const CHECKLIST_INIT_WARNING_KEY = 'checklistInitWarning';
 
@@ -21,28 +40,26 @@ type CreateProjectResponse = Project & {
   checklistInitWarning?: string | null;
 };
 
-const impactColors: Record<string, string> = {
-  low: 'badge-green',
-  moderate: 'badge-yellow',
-  high: 'badge-red',
+const impactVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  low: 'secondary',
+  moderate: 'outline',
+  high: 'destructive',
 };
 
 export default function ProjectsPage() {
   const router = useRouter();
-  const [list, setList] = useState<Project[]>([]);
+  const [list, setList] = useState<Project[] | null>(null);
   const [name, setName] = useState('My CSP');
   const [pathType, setPathType] = useState<'20x' | 'rev5'>('20x');
   const [impact, setImpact] = useState<'low' | 'moderate' | 'high'>('moderate');
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
-  const [showForm, setShowForm] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [err, setErr] = useState('');
-  const [info, setInfo] = useState('');
   const [creating, setCreating] = useState(false);
 
   function load() {
-    api<Project[]>('/projects')
-      .then(setList)
+    api<Project[] | PaginatedList<Project>>('/projects?limit=200')
+      .then((r) => setList(listItems(r)))
       .catch(() => setList([]));
   }
 
@@ -52,8 +69,6 @@ export default function ProjectsPage() {
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
-    setErr('');
-    setInfo('');
     setCreating(true);
     try {
       const created = await api<CreateProjectResponse>('/projects', {
@@ -65,7 +80,7 @@ export default function ProjectsPage() {
           complianceStartDate: startDate || undefined,
         }),
       });
-      setShowForm(false);
+      setDialogOpen(false);
       setName('My CSP');
       load();
       if (created.checklistInitWarning) {
@@ -73,12 +88,12 @@ export default function ProjectsPage() {
           sessionStorage.setItem(CHECKLIST_INIT_WARNING_KEY, created.checklistInitWarning);
           router.push(`/projects/${created.id}`);
         } catch {
-          setInfo(created.checklistInitWarning);
+          toast.info(created.checklistInitWarning);
         }
         return;
       }
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Failed to create project');
+      toast.error(e instanceof Error ? e.message : 'Failed to create project');
     } finally {
       setCreating(false);
     }
@@ -87,140 +102,160 @@ export default function ProjectsPage() {
   async function removeProject(id: string, projectName: string) {
     const ok = window.confirm(`Delete "${projectName}"? This removes all associated data.`);
     if (!ok) return;
-    setErr('');
     setDeletingId(id);
     try {
       await api(`/projects/${id}`, { method: 'DELETE' });
-      setList((prev) => prev.filter((p) => p.id !== id));
+      setList((prev) => (prev ?? []).filter((p) => p.id !== id));
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : 'Failed to delete project');
+      toast.error(e instanceof Error ? e.message : 'Failed to delete project');
     } finally {
       setDeletingId(null);
     }
   }
 
+  const loading = list === null;
+
   return (
-    <div className="animate-in">
-      <div className="page-header">
+    <div className="animate-in fade-in duration-300">
+      <div className="flex justify-between items-start gap-4 flex-wrap mb-7">
         <div>
-          <h1>Projects</h1>
-          <p className="page-desc" style={{ marginBottom: 0 }}>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Projects</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage FedRAMP compliance projects with auto-generated checklists, due dates, and POA&amp;M tracking.
           </p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
-          {showForm ? 'Cancel' : '+ New Project'}
-        </button>
+
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="size-4" />
+              New Project
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Create new project</DialogTitle>
+              <DialogDescription>
+                A checklist with suggested due dates will be auto-generated based on the impact level and compliance start date.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={create} className="grid gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="proj-name">Project name</Label>
+                  <Input
+                    id="proj-name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. My Cloud System"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="proj-path">FedRAMP Path</Label>
+                  <select
+                    id="proj-path"
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    value={pathType}
+                    onChange={(e) => setPathType(e.target.value as '20x' | 'rev5')}
+                  >
+                    <option value="20x">FedRAMP 20x</option>
+                    <option value="rev5">Rev 5</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="proj-impact">Impact Level</Label>
+                  <select
+                    id="proj-impact"
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    value={impact}
+                    onChange={(e) => setImpact(e.target.value as 'low' | 'moderate' | 'high')}
+                  >
+                    <option value="low">Low</option>
+                    <option value="moderate">Moderate</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="proj-start">Compliance Start Date</Label>
+                  <Input
+                    id="proj-start"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={creating}>
+                  {creating ? 'Creating…' : 'Create Project'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {showForm && (
-        <div className="card animate-in" style={{ marginBottom: '1.5rem' }}>
-          <h3>Create new project</h3>
-          <p className="text-sm text-muted mb-2">
-            A checklist with suggested due dates will be auto-generated based on the impact level and compliance start date.
-          </p>
-          <form onSubmit={create}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Project name</label>
-                <input
-                  className="form-input"
-                  style={{ maxWidth: '100%' }}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. My Cloud System"
-                />
+      {loading ? (
+        <div className="grid gap-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="p-4">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-10 w-10 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+                <Skeleton className="h-8 w-8 rounded-full" />
               </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">FedRAMP Path</label>
-                <select
-                  className="form-select"
-                  style={{ maxWidth: '100%' }}
-                  value={pathType}
-                  onChange={(e) => setPathType(e.target.value as '20x' | 'rev5')}
-                >
-                  <option value="20x">FedRAMP 20x</option>
-                  <option value="rev5">Rev 5</option>
-                </select>
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Impact Level</label>
-                <select
-                  className="form-select"
-                  style={{ maxWidth: '100%' }}
-                  value={impact}
-                  onChange={(e) => setImpact(e.target.value as 'low' | 'moderate' | 'high')}
-                >
-                  <option value="low">Low</option>
-                  <option value="moderate">Moderate</option>
-                  <option value="high">High</option>
-                </select>
-              </div>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Compliance Start Date</label>
-                <input
-                  className="form-input"
-                  type="date"
-                  style={{ maxWidth: '100%' }}
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
-              </div>
-            </div>
-            <button type="submit" className="btn btn-primary" disabled={creating}>
-              {creating ? 'Creating...' : 'Create Project'}
-            </button>
-          </form>
+            </Card>
+          ))}
         </div>
-      )}
-
-      {info && <div className="alert alert-info">{info}</div>}
-      {err && <div className="alert alert-error">{err}</div>}
-
-      {list.length === 0 ? (
-        <div className="empty-state">
-          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-          </svg>
-          <p>No projects yet. Create one to get started.</p>
-        </div>
+      ) : list.length === 0 ? (
+        <EmptyState
+          icon={FolderOpen}
+          title="No projects yet"
+          description="Create one to get started with FedRAMP compliance tracking."
+          actionLabel="New Project"
+          onAction={() => setDialogOpen(true)}
+        />
       ) : (
-        <div style={{ display: 'grid', gap: '0.6rem' }}>
+        <div className="grid gap-3">
           {list.map((p) => (
-            <div
+            <Card
               key={p.id}
-              className="card card-interactive"
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0, padding: '1rem 1.25rem' }}
+              className="group flex flex-row items-center justify-between gap-4 p-4 transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-md"
             >
               <Link
                 href={`/projects/${p.id}`}
-                style={{ textDecoration: 'none', color: 'inherit', flex: 1, minWidth: 0 }}
+                className="flex flex-1 items-center gap-3 text-inherit no-underline min-w-0"
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 'var(--radius)', background: 'var(--accent-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                    </svg>
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: '0.92rem' }}>{p.name}</div>
-                    <div className="gap-row" style={{ marginTop: '0.3rem', gap: '0.4rem' }}>
-                      <span className="badge badge-blue">{p.pathType}</span>
-                      <span className={`badge ${impactColors[p.impactLevel] || ''}`}>{p.impactLevel}</span>
-                    </div>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                  <ShieldCheck className="size-5 text-primary" aria-hidden="true" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold truncate">{p.name}</div>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    <Badge variant="secondary">{p.pathType}</Badge>
+                    <Badge variant={impactVariant[p.impactLevel] ?? 'outline'}>
+                      {p.impactLevel}
+                    </Badge>
                   </div>
                 </div>
               </Link>
-              <button
-                type="button"
-                className="btn btn-danger"
-                style={{ marginLeft: '1rem', fontSize: '0.74rem', padding: '0.35rem 0.7rem' }}
-                disabled={deletingId === p.id}
-                onClick={() => removeProject(p.id, p.name)}
-              >
-                {deletingId === p.id ? '...' : 'Delete'}
-              </button>
-            </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <ProgressRing value={0} size={32} strokeWidth={3} showLabel={false} />
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="text-muted-foreground hover:text-destructive"
+                  disabled={deletingId === p.id}
+                  onClick={() => removeProject(p.id, p.name)}
+                >
+                  <Trash2 className="size-4" />
+                  <span className="sr-only">Delete</span>
+                </Button>
+              </div>
+            </Card>
           ))}
         </div>
       )}

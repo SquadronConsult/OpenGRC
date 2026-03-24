@@ -6,9 +6,11 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -16,9 +18,15 @@ import { Finding } from '../entities/finding.entity';
 import { ChecklistItem } from '../entities/checklist-item.entity';
 import { ProjectsService } from '../projects/projects.service';
 import { AuditService } from '../audit/audit.service';
+import { FindingListQueryDto } from './dto/finding-list-query.dto';
+import { skipTakeFromPageLimit } from '../common/dto/page-limit-query.dto';
+import { parseSortParam } from '../common/sort/parse-sort';
+import { toPaginated } from '../common/pagination/paginated-result';
 
+@ApiTags('findings')
 @Controller('findings')
 @UseGuards(JwtAuthGuard)
+@ApiBearerAuth('bearer')
 export class FindingsController {
   constructor(
     @InjectRepository(Finding) private readonly repo: Repository<Finding>,
@@ -28,6 +36,7 @@ export class FindingsController {
   ) {}
 
   @Post()
+  @ApiOperation({ summary: 'Create finding' })
   async create(
     @Req() req: { user: { userId: string; role: string } },
     @Body()
@@ -59,9 +68,11 @@ export class FindingsController {
   }
 
   @Get('by-checklist/:checklistItemId')
+  @ApiOperation({ summary: 'List findings by checklist item (paginated)' })
   async list(
     @Param('checklistItemId') cid: string,
     @Req() req: { user: { userId: string; role: string } },
+    @Query() q: FindingListQueryDto,
   ) {
     const item = await this.items.findOne({ where: { id: cid } });
     if (!item) throw new NotFoundException('Checklist item not found');
@@ -70,10 +81,31 @@ export class FindingsController {
       req.user.userId,
       req.user.role,
     );
-    return this.repo.find({ where: { checklistItemId: cid } });
+    const paging = skipTakeFromPageLimit(q);
+    const sort = parseSortParam(
+      q.sort,
+      {
+        createdAt: 'f.created_at',
+        severity: 'f.severity',
+        status: 'f.status',
+      },
+      'createdAt',
+    );
+    const qb = this.repo
+      .createQueryBuilder('f')
+      .where('f.checklistItemId = :cid', { cid });
+    const total = await qb.getCount();
+    const rows = await qb
+      .clone()
+      .orderBy(sort.column, sort.order)
+      .skip(paging.skip)
+      .take(paging.take)
+      .getMany();
+    return toPaginated(rows, paging.page, paging.limit, total);
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Update finding' })
   async patch(
     @Param('id') id: string,
     @Req() req: { user: { userId: string; role: string } },

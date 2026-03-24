@@ -39,6 +39,22 @@ export class EvidenceItem {
   @Column({ name: 'metadata', type: 'simple-json', nullable: true })
   metadata: Record<string, unknown> | null;
 
+  /** draft | ready_for_review | accepted | rejected | expired */
+  @Column({ name: 'review_state', type: 'varchar', nullable: true })
+  reviewState: string | null;
+
+  @Column({ name: 'artifact_type', type: 'varchar', nullable: true })
+  artifactType: string | null;
+
+  @Column({ name: 'source_system', type: 'varchar', nullable: true })
+  sourceSystem: string | null;
+
+  @Column({ name: 'collection_start', type: 'datetime', nullable: true })
+  collectionStart: Date | null;
+
+  @Column({ name: 'collection_end', type: 'datetime', nullable: true })
+  collectionEnd: Date | null;
+
   @Column({ name: 'uploaded_by_id', type: 'varchar', nullable: true })
   uploadedById: string | null;
 

@@ -4,7 +4,7 @@ OpenGRC helps you move from compliance chaos to audit-ready outputs fast.
 
 **Status:** This project is still in development. Features, APIs, and defaults may change between releases.
 
-It is a local-first, single-user FedRAMP workspace that combines:
+It is a local-first FedRAMP workspace that combines:
 - machine-readable control baselines,
 - continuous evidence mapping,
 - guided gap closure,
@@ -37,20 +37,29 @@ If you need to stand up a practical FedRAMP program without buying a heavyweight
 - Node.js 20+
 - Docker Desktop (or compatible Docker Engine + Compose)
 
-### 2) Launch
+### 2) Launch (split dev: API + Web)
 
 From repo root:
 
 ```bash
 copy .env.example .env
+# Set SEED_ADMIN_PASSWORD (8+ chars) and AUTH_JWT_SECRET in .env
 docker compose up --build
 ```
 
 Open:
-- Web UI: `http://localhost:3001`
+- Web UI: `http://localhost:3001` — sign in with the seeded admin (`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`)
 - API: `http://localhost:3000`
 
-OpenGRC is single-user by default, with no sign-in flow.
+### 2b) Single-container (Postgres + API + Web)
+
+```bash
+docker compose -f docker-compose.all-in-one.yml up --build
+```
+
+- Web UI: `http://localhost:8080` (Next proxies API traffic via `/api/*`)
+
+Set `BOOTSTRAP_TOKEN` (and `AUTH_JWT_SECRET`) in the environment for first-admin bootstrap, or rely on optional `SEED_ADMIN_PASSWORD` for an auto-seeded admin when the database is empty.
 
 ### 3) First Success Path
 
@@ -99,9 +108,14 @@ Full MCP details: `docs/MCP_SERVER.md`
 ```bash
 npm run build
 npm run test:parity
+npm run test:e2e
 npm run test:autoscope
 npm run test:mcp
 ```
+
+`test:e2e` expects the API at `API_URL` (default `http://localhost:3000`). It exercises versions, project bootstrap, POA&M sync, and evidence-gap reporting.
+
+Agent-oriented notes (API conventions, MCP, migrations): see `AGENTS.md`. Local diagnostics UI: **Local ops** in the sidebar (`/ops`).
 
 ## Notes
 
@@ -111,6 +125,7 @@ npm run test:mcp
 
 ## Docs
 
+- `AGENTS.md` (AI coding agents and API conventions)
 - `docs/PRODUCTION.md`
 - `docs/AUTO_SCOPING.md`
 - `docs/MCP_SERVER.md`

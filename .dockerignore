@@ -1,0 +1,8 @@
+.git
+**/node_modules
+apps/api/dist
+apps/web/.next
+**/*.sqlite
+**/evidence
+.env
+.env.*

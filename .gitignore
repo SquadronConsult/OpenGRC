@@ -9,3 +9,5 @@ pgdata/
 .cursor/
 local-data/
 evidence/
+*.sqlite
+tsconfig.tsbuildinfo

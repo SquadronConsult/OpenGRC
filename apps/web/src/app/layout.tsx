@@ -3,23 +3,97 @@
 import './globals.css';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
+import {
+  Shield,
+  LayoutGrid,
+  Settings2,
+  BookOpen,
+  ClipboardCheck,
+  Zap,
+  Menu,
+} from 'lucide-react';
+import { AuthProvider } from '@/components/AuthProvider';
+import { AuthShell } from '@/components/AuthShell';
+import { UserMenu } from '@/components/UserMenu';
+import { MicroGoalBanner } from '@/components/compliance/MicroGoalBanner';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { Toaster } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
+import type { LucideIcon } from 'lucide-react';
 
-const navItems = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+const navSections: { section: string; links: NavItem[] }[] = [
   {
     section: 'Workspace',
     links: [
-      { href: '/projects', label: 'Projects', icon: 'M3 3h7v7H3zm11 0h7v7h-7zm0 11h7v7h-7zM3 14h7v7H3z' },
+      { href: '/projects', label: 'Projects', icon: LayoutGrid },
+      { href: '/ops', label: 'Ops', icon: Settings2 },
     ],
   },
   {
     section: 'FedRAMP Data',
     links: [
-      { href: '/glossary', label: 'Glossary', icon: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z' },
-      { href: '/requirements', label: 'Requirements', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
-      { href: '/ksi', label: 'KSIs', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+      { href: '/glossary', label: 'Glossary', icon: BookOpen },
+      { href: '/requirements', label: 'Requirements', icon: ClipboardCheck },
+      { href: '/ksi', label: 'KSIs', icon: Zap },
     ],
   },
 ];
+
+function SidebarContent({ pathname }: { pathname: string }) {
+  return (
+    <>
+      <Link
+        href="/"
+        className="flex items-center gap-2.5 px-5 py-4 text-base font-bold tracking-tight text-foreground no-underline"
+      >
+        <Shield size={20} className="text-primary" aria-hidden="true" />
+        OpenGRC
+      </Link>
+
+      <nav aria-label="Main navigation" className="flex-1 space-y-1 px-3">
+        {navSections.map((section) => (
+          <div key={section.section} className="mb-2">
+            <div className="px-2 pb-1 pt-3 text-[0.6rem] font-bold uppercase tracking-widest text-muted-foreground">
+              {section.section}
+            </div>
+            {section.links.map((item) => {
+              const active = pathname.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    'flex items-center gap-2.5 rounded-lg px-3 py-2 text-[0.82rem] font-medium transition-colors',
+                    active
+                      ? 'bg-primary/10 font-semibold text-primary'
+                      : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                  )}
+                >
+                  <item.icon size={16} aria-hidden="true" className={cn('shrink-0', active ? 'opacity-100' : 'opacity-70')} />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
+      </nav>
+
+      <div className="mt-auto border-t border-border px-4 py-3">
+        <div className="text-[0.7rem] text-muted-foreground">OpenGRC v0.2</div>
+        <UserMenu />
+      </div>
+    </>
+  );
+}
 
 export default function RootLayout({
   children,
@@ -27,54 +101,67 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <head>
         <title>OpenGRC</title>
         <meta name="description" content="Open-source FedRAMP compliance platform" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet"
+        />
       </head>
-      <body>
-        <div className="app-shell">
-          <aside className="sidebar">
-            <Link href="/" className="sidebar-brand">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
-              OpenGRC
-            </Link>
+      <body className="antialiased">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:p-2 focus:bg-primary focus:text-primary-foreground focus:rounded"
+        >
+          Skip to content
+        </a>
+        <AuthProvider>
+          <TooltipProvider>
+            <div className="flex min-h-screen">
+              {/* Desktop sidebar */}
+              <aside className="fixed inset-y-0 left-0 z-50 hidden w-60 flex-col border-r border-border bg-card md:flex">
+                <SidebarContent pathname={pathname} />
+              </aside>
 
-            {navItems.map((section) => (
-              <div key={section.section} className="sidebar-section">
-                <div className="sidebar-heading">{section.section}</div>
-                {section.links.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`sidebar-link${pathname.startsWith(item.href) ? ' active' : ''}`}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d={item.icon} />
-                    </svg>
-                    {item.label}
-                  </Link>
-                ))}
+              {/* Mobile header + sheet */}
+              <div className="fixed inset-x-0 top-0 z-40 flex h-12 items-center border-b border-border bg-card px-4 md:hidden">
+                <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon" className="mr-2">
+                      <Menu size={18} />
+                      <span className="sr-only">Open menu</span>
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="w-60 p-0">
+                    <SidebarContent pathname={pathname} />
+                  </SheetContent>
+                </Sheet>
+                <Link href="/" className="flex items-center gap-2 text-sm font-bold text-foreground">
+                  <Shield size={16} className="text-primary" aria-hidden="true" />
+                  OpenGRC
+                </Link>
               </div>
-            ))}
 
-            <div className="sidebar-footer">
-              <div className="text-xs text-dim">OpenGRC v0.1</div>
-              <div className="text-xs text-dim" style={{ marginTop: '0.15rem' }}>Local mode</div>
+              {/* Main content area */}
+              <div className="flex-1 md:ml-60">
+                <AuthShell>
+                  <MicroGoalBanner className="hidden md:flex" />
+                  <main id="main-content" className="mx-auto max-w-[1100px] px-4 py-6 md:px-8 md:py-8 mt-12 md:mt-0">
+                    {children}
+                  </main>
+                </AuthShell>
+              </div>
             </div>
-          </aside>
-
-          <div className="main-content">
-            <main>{children}</main>
-          </div>
-        </div>
+            <Toaster position="bottom-right" richColors />
+          </TooltipProvider>
+        </AuthProvider>
       </body>
     </html>
   );

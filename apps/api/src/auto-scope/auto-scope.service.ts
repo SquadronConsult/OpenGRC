@@ -508,6 +508,8 @@ export class AutoScopeService {
     userId: string,
     role: string,
     query: { status?: string; decision?: string; runId?: string; minConfidence?: number },
+    paging: { skip: number; take: number; page: number; limit: number },
+    sort: { column: string; order: 'ASC' | 'DESC' },
   ) {
     await this.projectsService.assertAccess(projectId, userId, role);
     const qb = this.recommendationRepo
@@ -525,10 +527,19 @@ export class AutoScopeService {
         minConfidence: query.minConfidence,
       });
 
-    const items = await qb.orderBy('r.created_at', 'DESC').getMany();
+    const total = await qb.getCount();
+    const items = await qb
+      .clone()
+      .orderBy(sort.column, sort.order)
+      .skip(paging.skip)
+      .take(paging.take)
+      .getMany();
     return {
       items,
-      total: items.length,
+      total,
+      page: paging.page,
+      limit: paging.limit,
+      hasMore: paging.page * paging.limit < total,
     };
   }
 

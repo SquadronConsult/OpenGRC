@@ -20,6 +20,11 @@
     "mcp:daemon:stop": "node scripts/mcp-daemon.mjs stop",
     "mcp:daemon:status": "node scripts/mcp-daemon.mjs status",
     "test:parity": "node scripts/parity-smoke.mjs",
+    "test:risk-scoring": "node scripts/risk-scoring-smoke.mjs",
+    "test:connectors": "node scripts/connector-parity.mjs",
+    "test:catalog": "node scripts/catalog-parity.mjs",
+    "test:e2e": "node scripts/e2e-workflow.mjs",
+    "test:pagination-smoke": "node scripts/pagination-smoke.mjs",
     "test:autoscope": "node scripts/autoscope-smoke.mjs",
     "test:mcp": "node scripts/mcp-smoke.mjs",
     "import:json": "node scripts/import-export-json.mjs"

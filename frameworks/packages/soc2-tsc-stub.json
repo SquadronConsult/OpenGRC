@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "framework": {
+    "code": "soc2_tsc",
+    "name": "SOC 2 Trust Services Criteria",
+    "description": "Stub TSC package for multi-framework mapping tests."
+  },
+  "release": { "releaseCode": "2022", "label": "TSC 2022" },
+  "controls": [{ "controlCode": "CC", "title": "Common Criteria" }],
+  "requirements": [
+    {
+      "controlCode": "CC",
+      "requirementCode": "CC6.1",
+      "statement": "Logical and physical access controls are implemented and managed."
+    }
+  ]
+}
