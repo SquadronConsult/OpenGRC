@@ -5,6 +5,14 @@
 3. Keep FRMR ingestion tolerant of schema tweaks—add tests or fixtures under `apps/api` when changing the parser.
 4. Open a PR with a clear description; follow existing TypeScript style.
 
+When changing MCP behavior, keep the modular layout in mind:
+
+- add or update tools in `apps/mcp-server/src/handlers/*`
+- register them in `apps/mcp-server/src/tool-registry.mjs`
+- keep shared execution logic in `apps/mcp-server/src/helpers.mjs`
+- keep repo gap detection in `apps/mcp-server/src/utils/gap-detectors/*`
+- update `capabilities_v1`, `docs/MCP_SERVER.md`, and any README references when the tool surface changes
+
 Code of conduct: be respectful and professional.
 
 ## Local development (no Docker)
@@ -29,6 +37,8 @@ These run `apps/api` (`start:dev`) and `apps/web` (`next dev -p 3001`).
 Set `NEXT_PUBLIC_API_URL` if the web app must call a different API origin (for Docker-style same-origin testing, use `proxy` and rewrites as in `apps/web/next.config.mjs`).
 
 **MCP server** (optional, third terminal): `npm run dev:mcp` from the repo root (runs `apps/mcp-server`). Set `OPEN_GRC_API_URL` to your API (e.g. `http://127.0.0.1:3000` for local API, or `http://127.0.0.1:8080/api` when the stack runs in Docker).
+
+If you add MCP tools that need non-JWT access to existing API workflows, prefer integration-key wrappers in `apps/api/src/integrations/integrations.controller.ts` that delegate to existing services instead of duplicating business logic.
 
 ## Docker (single Compose file)
 
@@ -55,4 +65,4 @@ On Unix-like shells: `export API_URL=http://localhost:8080/api`.
 
 Other useful scripts from the repo root include `test:mcp`, `test:catalog`, `test:connectors`, and `test:autoscope`. See [package.json](package.json) for the full list.
 
-See [README.md](README.md) for the recommended MCP agent flow and documentation links.
+See [README.md](README.md) for the recommended MCP agent flow and [docs/MCP_SERVER.md](docs/MCP_SERVER.md) for the current MCP tool inventory and verification flow.

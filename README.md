@@ -24,6 +24,7 @@ If you need a practical FedRAMP-oriented program without a heavyweight platform�
 - Attach evidence directly to controls; run **connector** automation where configured
 - Run recommendation-first **auto-scoping**
 - Manage **risks**, **policies**, and related GRC entities in-app
+- Drive the same workflows through MCP: dashboard stats, ConMon, risks, policies, pipeline checks, checklist updates, auto-scope approvals, cross-framework mapping, findings, audits, incidents, and vendors
 - Generate POA&M with timeline view
 - Export OSCAL SSP + OSCAL POA&M JSON (FedRAMP-oriented tooling)
 - Use MCP (**capabilities_v1**, autopilot, taxonomy, etc.) for end-to-end agent workflows
@@ -82,6 +83,16 @@ This builds and starts the **Docker** stack, waits for API health (via `/api` on
 
 Point `OPEN_GRC_API_URL` at the API through the web proxy, e.g. `http://127.0.0.1:8080/api` (see [docs/MCP_SERVER.md](docs/MCP_SERVER.md)).
 
+The MCP server is now organized into modular handlers behind a shared tool registry, so repo analysis, remediation, evidence linkage, reporting, risks, policies, checklist, pipeline, and GRC workflow tools can evolve independently while keeping one MCP endpoint.
+
+MCP highlights:
+
+- **Start here:** `capabilities_v1`
+- **Repo + remediation:** `repo_inventory_v1`, `control_gap_map_v1`, `remediation_plan_v1`, `gap_closure_execution_brief_v1`, `compliance_agent_autopilot_v1`
+- **Reporting + operations:** `dashboard_stats_v1`, `dashboard_conmon_v1`, `executive_briefing_v1`, `pipeline_check_v1`
+- **Program workflows:** `risks_*_v1`, `policies_*_v1`, `checklist_*_v1`, `auto_scope_*_v1`, `catalog_cross_map_v1`, `findings_*_v1`, `audits_create_v1`, `incidents_create_v1`, `vendors_list_v1`
+- **Evidence + connectors:** `evidence_link_*_v1`, `connectors_*_v1`, `fedramp_oscal_report_v1`
+
 Recommended agent flow:
 
 1. `capabilities_v1`
@@ -124,7 +135,7 @@ Agent-oriented notes (API conventions, MCP, migrations): [AGENTS.md](AGENTS.md).
 - [CONTRIBUTING.md](CONTRIBUTING.md) — how to develop
 - [docs/PRODUCTION.md](docs/PRODUCTION.md) — TLS, env, operations
 - [docs/AUTO_SCOPING.md](docs/AUTO_SCOPING.md)
-- [docs/MCP_SERVER.md](docs/MCP_SERVER.md)
+- [docs/MCP_SERVER.md](docs/MCP_SERVER.md) — MCP tool inventory, workflows, integration routes
 - [docs/CONTROLS_PROGRAM.md](docs/CONTROLS_PROGRAM.md) — controls program implementation guide (best practices across NIST, FedRAMP, ISO 27001, SOC 2, CMMC)
 - [docs/BACKUP.md](docs/BACKUP.md)
 - [docs/DESKTOP.md](docs/DESKTOP.md)

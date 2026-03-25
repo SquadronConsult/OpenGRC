@@ -94,17 +94,46 @@ function detectIac(files) {
 }
 
 function detectSecuritySignals(files) {
+  const lower = (f) => f.toLowerCase();
   return {
     hasCi: files.some((f) => f.startsWith('.github/workflows/') || f.includes('.gitlab-ci')),
-    hasSast: files.some((f) => f.toLowerCase().includes('semgrep') || f.toLowerCase().includes('codeql')),
+    hasSast: files.some((f) => lower(f).includes('semgrep') || lower(f).includes('codeql')),
     hasDependencyLock: files.some(
       (f) =>
         f.endsWith('package-lock.json') ||
         f.endsWith('yarn.lock') ||
+        f.endsWith('pnpm-lock.yaml') ||
         f.endsWith('poetry.lock') ||
         f.endsWith('go.sum'),
     ),
     hasSecretsFiles: files.some((f) => /(^|\/)\.env($|\.)/i.test(f)),
+    hasDast: files.some((f) => /zap|dast|stackhawk|burp|owasp-zap/i.test(lower(f))),
+    hasStructuredLogging: files.some((f) =>
+      /pino|winston|bunyan|structured[-_]log|pino-http/i.test(lower(f)),
+    ),
+    hasAuthConfig: files.some(
+      (f) =>
+        (lower(f).includes('jwt') || lower(f).includes('oauth') || lower(f).includes('session')) &&
+        (lower(f).includes('auth') || lower(f).includes('guard') || lower(f).includes('middleware')),
+    ),
+    hasSbomGeneration: files.some((f) =>
+      /syft|cyclonedx|sbom|spdx|bom\.json/i.test(lower(f)),
+    ),
+    hasSecretScanning: files.some((f) =>
+      /gitleaks|trufflehog|secretlint|detect-secrets|secret-scanning/i.test(lower(f)),
+    ),
+    hasCodeowners: files.some(
+      (f) => f.endsWith('CODEOWNERS') || f.endsWith('.github/CODEOWNERS'),
+    ),
+    hasLicenseChecker: files.some((f) =>
+      /license-check|licensed\.yml|license_finder|fossa|license-compliance/i.test(lower(f)),
+    ),
+    hasOpenApiSpec: files.some(
+      (f) =>
+        lower(f).includes('openapi') ||
+        lower(f).includes('swagger') ||
+        (/\.(yaml|yml|json)$/.test(f) && lower(f).includes('api-spec')),
+    ),
   };
 }
 
@@ -146,12 +175,28 @@ function deriveContextHints(files) {
     );
   });
 
+  const dockerComposeFiles = normalized.filter((f) =>
+    /docker-compose.*\.(ya?ml)$/i.test(f),
+  );
+  const authConfigFiles = normalized.filter(
+    (f) =>
+      /(^|\/)(auth|jwt|oauth)[^/]*\.(ts|js|mjs)$/i.test(f) ||
+      /\/auth\//i.test(f) ||
+      /jwt-auth\.guard\./i.test(f),
+  );
+  const preCommitConfig = normalized.filter((f) =>
+    /^\.pre-commit-config\.(ya?ml)$/.test(f),
+  );
+
   return {
     ciWorkflowFiles: ciWorkflowFiles.slice(0, 30),
     complianceFiles: complianceFiles.slice(0, 40),
     lockfiles: lockfiles.slice(0, 30),
     dockerfiles: dockerfiles.slice(0, 30),
     iacFiles: iacFiles.slice(0, 40),
+    dockerComposeFiles: dockerComposeFiles.slice(0, 20),
+    authConfigFiles: authConfigFiles.slice(0, 30),
+    preCommitConfig: preCommitConfig.slice(0, 5),
     hasGitHubActions: hasPath('.github/workflows') || ciWorkflowFiles.length > 0,
     likelyPrimaryCiFile:
       ciWorkflowFiles.find((f) => /ci|build|test/i.test(f)) || ciWorkflowFiles[0] || null,

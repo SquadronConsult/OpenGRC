@@ -49,6 +49,49 @@ async function getJson(path, options = {}) {
   }
 }
 
+export async function patchJson(path, payload, extraHeaders = {}) {
+  const res = await fetch(`${config.opengrcApiUrl}${path}`, {
+    method: 'PATCH',
+    headers: {
+      'content-type': 'application/json',
+      authorization: buildAuthHeader(),
+      ...extraHeaders,
+    },
+    body: JSON.stringify(payload ?? {}),
+  });
+  const body = await res.text();
+  if (!res.ok) {
+    throw new Error(`OpenGRC request failed: ${res.status} ${body}`);
+  }
+  try {
+    return JSON.parse(body);
+  } catch {
+    return body;
+  }
+}
+
+export async function deleteJson(path, extraHeaders = {}) {
+  const res = await fetch(`${config.opengrcApiUrl}${path}`, {
+    method: 'DELETE',
+    headers: {
+      authorization: buildAuthHeader(),
+      ...extraHeaders,
+    },
+  });
+  const body = await res.text();
+  if (!res.ok) {
+    throw new Error(`OpenGRC request failed: ${res.status} ${body}`);
+  }
+  if (body.length === 0) return { ok: true };
+  try {
+    return JSON.parse(body);
+  } catch {
+    return body;
+  }
+}
+
+const integV1 = '/integrations/v1';
+
 function buildQuery(params = {}) {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
@@ -419,4 +462,164 @@ export async function fedrampOscalReportV1(payload) {
       ksiCount: Array.isArray(taxonomy?.ksiIndicators) ? taxonomy.ksiIndicators.length : 0,
     },
   };
+}
+
+/** Integration key routes: `/integrations/v1/*` (see API IntegrationsController). */
+
+export async function integrationDashboardStatsV1() {
+  return getJson(`${integV1}/dashboard/stats`);
+}
+
+export async function integrationProjectStatsV1(projectId) {
+  if (!projectId) throw new Error('projectId is required');
+  return getJson(
+    `${integV1}/projects/${encodeURIComponent(projectId)}/stats`,
+  );
+}
+
+export async function integrationProjectConmonV1(projectId) {
+  if (!projectId) throw new Error('projectId is required');
+  return getJson(
+    `${integV1}/projects/${encodeURIComponent(projectId)}/conmon`,
+  );
+}
+
+export async function integrationExecutiveBriefingV1(projectId) {
+  if (!projectId) throw new Error('projectId is required');
+  return getJson(
+    `${integV1}/projects/${encodeURIComponent(projectId)}/executive-briefing`,
+  );
+}
+
+export async function integrationRisksListV1(projectId, query = {}) {
+  if (!projectId) throw new Error('projectId is required');
+  return getJson(
+    `${integV1}/projects/${encodeURIComponent(projectId)}/risks${buildQuery(query)}`,
+  );
+}
+
+export async function integrationRisksCreateV1(projectId, body) {
+  if (!projectId) throw new Error('projectId is required');
+  return postJson(
+    `${integV1}/projects/${encodeURIComponent(projectId)}/risks`,
+    body,
+  );
+}
+
+export async function integrationRisksHeatmapV1(projectId) {
+  if (!projectId) throw new Error('projectId is required');
+  return getJson(
+    `${integV1}/projects/${encodeURIComponent(projectId)}/risks/heatmap`,
+  );
+}
+
+export async function integrationRisksUpdateV1(projectId, riskId, body) {
+  if (!projectId) throw new Error('projectId is required');
+  if (!riskId) throw new Error('riskId is required');
+  return patchJson(
+    `${integV1}/projects/${encodeURIComponent(projectId)}/risks/${encodeURIComponent(riskId)}`,
+    body,
+  );
+}
+
+export async function integrationPoliciesCreateV1(body) {
+  return postJson(`${integV1}/policies`, body);
+}
+
+export async function integrationPoliciesUpdateV1(policyId, body) {
+  if (!policyId) throw new Error('policyId is required');
+  return patchJson(`${integV1}/policies/${encodeURIComponent(policyId)}`, body);
+}
+
+export async function integrationPoliciesPublishV1(policyId, body = {}) {
+  if (!policyId) throw new Error('policyId is required');
+  return postJson(
+    `${integV1}/policies/${encodeURIComponent(policyId)}/publish`,
+    body,
+  );
+}
+
+export async function integrationPoliciesGenerateV1(body) {
+  if (!body?.projectId) throw new Error('projectId is required');
+  return postJson(`${integV1}/policies/generate`, body);
+}
+
+export async function integrationPipelineCheckV1(body) {
+  if (!body?.projectId) throw new Error('projectId is required');
+  return postJson(`${integV1}/pipeline/check`, body);
+}
+
+export async function integrationChecklistBulkUpdateV1(body) {
+  if (!Array.isArray(body?.ids) || body.ids.length === 0) {
+    throw new Error('ids[] is required');
+  }
+  return patchJson(`${integV1}/checklist-items/bulk`, body);
+}
+
+export async function integrationChecklistPatchItemV1(itemId, body) {
+  if (!itemId) throw new Error('checklistItemId is required');
+  return patchJson(
+    `${integV1}/checklist-items/${encodeURIComponent(itemId)}`,
+    body,
+  );
+}
+
+export async function integrationAutoScopeRecommendationsV1(projectId, query = {}) {
+  if (!projectId) throw new Error('projectId is required');
+  return getJson(
+    `${integV1}/projects/${encodeURIComponent(projectId)}/auto-scope/recommendations${buildQuery(query)}`,
+  );
+}
+
+export async function integrationAutoScopeApproveV1(
+  projectId,
+  recommendationId,
+  body = {},
+) {
+  if (!projectId) throw new Error('projectId is required');
+  if (!recommendationId) throw new Error('recommendationId is required');
+  return postJson(
+    `${integV1}/projects/${encodeURIComponent(projectId)}/auto-scope/recommendations/${encodeURIComponent(recommendationId)}/approve`,
+    body,
+  );
+}
+
+export async function integrationCatalogCrossMapV1(query = {}) {
+  return getJson(`${integV1}/catalog/cross-map${buildQuery(query)}`);
+}
+
+export async function integrationFindingsCreateV1(body) {
+  if (!body?.checklistItemId) throw new Error('checklistItemId is required');
+  if (!body?.title) throw new Error('title is required');
+  return postJson(`${integV1}/findings`, body);
+}
+
+export async function integrationFindingsListV1(checklistItemId, query = {}) {
+  if (!checklistItemId) throw new Error('checklistItemId is required');
+  return getJson(
+    `${integV1}/checklist-items/${encodeURIComponent(checklistItemId)}/findings${buildQuery(query)}`,
+  );
+}
+
+export async function integrationAuditsCreateV1(projectId, body) {
+  if (!projectId) throw new Error('projectId is required');
+  return postJson(
+    `${integV1}/projects/${encodeURIComponent(projectId)}/audits`,
+    body,
+  );
+}
+
+export async function integrationIncidentsCreateV1(projectId, body) {
+  if (!projectId) throw new Error('projectId is required');
+  return postJson(
+    `${integV1}/projects/${encodeURIComponent(projectId)}/incidents`,
+    body,
+  );
+}
+
+export async function integrationVendorsListV1(projectId) {
+  if (!projectId) throw new Error('projectId is required');
+  return getJson(
+    `${integV1}/projects/${encodeURIComponent(projectId)}/vendors`,
+  );
 }

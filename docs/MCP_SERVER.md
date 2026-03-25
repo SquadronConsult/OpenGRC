@@ -13,6 +13,14 @@ This project now runs MCP as a host daemon with Streamable HTTP transport so Cur
   - `npm run mcp:daemon:stop`
   - `npm run mcp:daemon:status`
 
+## Server Code Layout
+
+- `apps/mcp-server/src/index.mjs` — Express + MCP transport bootstrap and shutdown only
+- `apps/mcp-server/src/tool-registry.mjs` — aggregates `tools[]` from handlers and dispatches by tool name
+- `apps/mcp-server/src/helpers.mjs` — shared text/error formatting, path resolution, rollback, and validation helpers
+- `apps/mcp-server/src/handlers/*` — domain tool groups (repo, gaps, remediation, evidence, connectors, reporting, risks, policies, checklist, pipeline, auto-scope, cross-framework, findings, audits/incidents/vendors, skills)
+- `apps/mcp-server/src/utils/gap-detectors/*` — detector registry and detector modules used by `control_gap_map_v1`
+
 ## Start OpenGRC (Docker)
 
 ```bash
@@ -106,19 +114,35 @@ Use the same localhost MCP URL:
 
 ## Verification Flow
 
-1. `capabilities_v1`
-2. `list_tools` (client-native)
-3. `dry_run_remediation_v1` with a minimal single-file change
+1. `capabilities_v1` (returns `categories`, `workflows`, and prerequisites)
+2. `list_tools` (client-native) — expect **54** tools in the current registry
+3. Optional: call new integration-backed tools with `INTEGRATION_API_KEY` set:
+   - `dashboard_stats_v1` → `GET /integrations/v1/dashboard/stats` or project stats
+   - `risks_list_v1` / `pipeline_check_v1` / `catalog_cross_map_v1`
+4. `dry_run_remediation_v1` with a minimal single-file change (file mutation guardrails)
 
 ## Exposed MCP Tools
 
+**Discovery & help**
+
 - `capabilities_v1`
+
+**Repo & gaps**
+
 - `repo_inventory_v1`
 - `control_gap_map_v1`
 - `remediation_plan_v1`
+- `gap_closure_execution_brief_v1`
+
+**Remediation files & validation**
+
 - `apply_remediation_v1`
 - `dry_run_remediation_v1`
 - `validate_remediation_v1`
+- `rollback_run_v1` (paired with remediation runs)
+
+**Evidence linkage**
+
 - `sync_grc_evidence_v1`
 - `evidence_link_upsert_v1`
 - `evidence_link_bulk_ingest_v1`
@@ -127,20 +151,80 @@ Use the same localhost MCP URL:
 - `evidence_link_ingest_status_v1`
 - `evidence_link_trigger_auto_scope_v1`
 - `evidence_link_project_bootstrap_verify_v1`
-- `frmr_taxonomy_v1`
-- `compliance_agent_autopilot_v1`
-- `fedramp_oscal_report_v1`
-- `gap_closure_execution_brief_v1`
-- `list_skills_v1`
-- `run_skill_agent_v1`
-- `get_run_log_v1`
-- `rollback_run_v1`
+
+**Connectors**
+
 - `connectors_registry_v1`
 - `connectors_list_v1`
 - `connectors_status_v1`
 - `connectors_run_v1`
 - `connectors_runs_v1`
 - `connectors_create_v1`
+
+**Framework & search**
+
+- `frmr_taxonomy_v1`
+- `catalog_frameworks_v1`
+- `opengrc_search_v1`
+- `opengrc_policies_list_v1`
+
+**Orchestration**
+
+- `compliance_agent_autopilot_v1`
+
+**Dashboard & reporting**
+
+- `dashboard_stats_v1`
+- `dashboard_conmon_v1`
+- `executive_briefing_v1`
+- `fedramp_oscal_report_v1`
+
+**Risks**
+
+- `risks_list_v1`
+- `risks_create_v1`
+- `risks_heatmap_v1`
+- `risks_update_v1`
+
+**Policies**
+
+- `policies_create_v1`
+- `policies_update_v1`
+- `policies_publish_v1`
+- `policies_generate_v1`
+
+**Pipeline & checklist**
+
+- `pipeline_check_v1`
+- `checklist_bulk_update_v1`
+- `checklist_patch_item_v1`
+
+**Auto-scope & catalog**
+
+- `auto_scope_recommendations_v1`
+- `auto_scope_approve_v1`
+- `catalog_cross_map_v1`
+
+**Findings & GRC entities**
+
+- `findings_create_v1`
+- `findings_list_v1`
+- `audits_create_v1`
+- `incidents_create_v1`
+- `vendors_list_v1`
+
+**Skills**
+
+- `list_skills_v1`
+- `run_skill_agent_v1`
+
+**Run audit**
+
+- `get_run_log_v1`
+
+### Integration API mapping (global `INTEGRATION_API_KEY`)
+
+Tools above that call OpenGRC over HTTP use `Authorization: Bearer $INTEGRATION_API_KEY` against `OPEN_GRC_API_URL`. New **global** integration routes live under `/integrations/v1/…` (see API `IntegrationsController`): dashboard stats, project stats/conmon/briefing, risks, policies, pipeline check, checklist bulk/patch, auto-scope recommendations/approve, catalog cross-map, findings, audits, incidents, vendors — each mirrored by the corresponding `*_v1` MCP tool.
 
 ## Full Autofix Guardrails
 

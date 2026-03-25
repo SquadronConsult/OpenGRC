@@ -32,6 +32,7 @@ import { ChecklistService } from './checklist/checklist.service';
 import { ChecklistItemsController } from './checklist/checklist-items.controller';
 import { EvidenceController } from './evidence/evidence.controller';
 import { FindingsController } from './findings/findings.controller';
+import { FindingsService } from './findings/findings.service';
 import { CommentsController } from './comments/comments.controller';
 import { IntegrationsController } from './integrations/integrations.controller';
 import { IntegrationEvidenceService } from './integrations/integration-evidence.service';
@@ -218,6 +219,7 @@ function buildTypeOrmConfig() {
     PolicyService,
     PolicyCronService,
     SearchService,
+    FindingsService,
   ],
 })
 export class AppModule implements OnApplicationBootstrap {
