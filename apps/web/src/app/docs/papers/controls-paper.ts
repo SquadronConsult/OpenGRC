@@ -669,7 +669,7 @@ Your continuous monitoring strategy must produce quantifiable, exportable metric
 
 1. **Configure connectors** for your scanner, IdP, and CSPM tools. Connectors push evidence into checklist items automatically.
 2. **Enable the compliance snapshot cron.** This captures readiness %, control status, and posture metrics on a schedule—creating the trend data assessors want to see.
-3. **Use the CI/CD pipeline gate** (\`/pipeline/readiness-check\`). Set a readiness threshold (e.g., 95%). Fail deploys that drop below it.
+3. **Use the CI/CD pipeline gate** (\`POST /pipeline/check\`). Set a readiness threshold (e.g., 95%). Fail deploys that drop below it. Embed the compliance badge (\`GET /pipeline/badge/:projectId\`) in your repo README for visibility.
 4. **Generate reports** via the API: \`compliance-summary\`, \`risk-posture\`, \`executive-briefing\`. Or use MCP \`compliance_agent_autopilot_v1\` for end-to-end gap-to-evidence flow.
 
 ### Evidence that closes KSIs
@@ -1199,7 +1199,152 @@ curl -X POST "https://your-opengrc/api/integrations/v1/controls/link" \\
 └─────────────────────────────────────────────────────────────┘
 \`\`\`
 
-**The result:** Evidence flows in continuously. Readiness percentage stays above your threshold. Gaps are detected within hours, not weeks. Your compliance posture is always current, and assessor preparation is a report export—not a scramble.`,
+**The result:** Evidence flows in continuously. Readiness percentage stays above your threshold. Gaps are detected within hours, not weeks. Your compliance posture is always current, and assessor preparation is a report export—not a scramble.
+
+---
+
+### Additional OpenGRC capabilities for controls programs
+
+These features are available in the platform and relevant to closing controls but often overlooked during setup.
+
+**Per-project integration credentials**
+
+Instead of sharing a single global \`INTEGRATION_API_KEY\`, create scoped credentials per project:
+
+\`\`\`bash
+# Create a project-scoped integration credential
+curl -X POST "https://your-opengrc/api/integrations/v1/projects/$PROJECT_ID/credentials" \\
+  -H "Authorization: Bearer $INTEGRATION_API_KEY" \\
+  -H "Content-Type: application/json"
+# Returns: { credentialId, key, projectId }
+# Use the returned key as Bearer token for that project's evidence pushes
+\`\`\`
+
+This gives each project its own API key—useful for multi-boundary environments where different CI pipelines serve different systems.
+
+**Compliance badge**
+
+Embed a live compliance readiness badge in your repository README or internal dashboards:
+
+\`\`\`markdown
+![Compliance](https://your-opengrc/api/pipeline/badge/YOUR_PROJECT_UUID)
+\`\`\`
+
+The badge shows current readiness percentage and updates automatically.
+
+**OSCAL export suite**
+
+OpenGRC exports four OSCAL artifact types, not just SSP and POA&M:
+
+| Export | Endpoint | Use case |
+|--------|---------|----------|
+| OSCAL SSP | \`GET /projects/:id/export?format=oscal-ssp\` | System security plan for authorization package |
+| OSCAL POA&M | \`GET /projects/:id/poam?format=oscal-poam\` | Plan of action and milestones |
+| OSCAL Assessment Plan | \`GET /projects/:id/export?format=oscal-ap\` | Assessment methodology and scope |
+| OSCAL Assessment Results | \`GET /projects/:id/export?format=oscal-ar\` | Findings and determinations |
+
+Also available: JSON bundle, Markdown, and CSV formats for POA&M.
+
+**OSCAL SSP import**
+
+If you have an existing OSCAL SSP (from another tool or a previous assessment), import it:
+
+\`\`\`bash
+curl -X POST "https://your-opengrc/api/projects/$PROJECT_ID/oscal/import-ssp" \\
+  -H "Authorization: Bearer $JWT" \\
+  -H "Content-Type: application/json" \\
+  -d @my-ssp.oscal.json
+\`\`\`
+
+This bootstraps your project with controls, implementation statements, and metadata from the SSP.
+
+**Vendor management (supply chain controls)**
+
+Track third-party vendors and their security posture — critical for SR (Supply Chain) and SA (System and Services Acquisition) controls:
+
+\`\`\`bash
+# Register a vendor
+curl -X POST "https://your-opengrc/api/projects/$PROJECT_ID/vendors" \\
+  -H "Authorization: Bearer $JWT" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "name": "Cloud Provider X", "category": "IaaS", "criticality": "high" }'
+
+# Record an assessment
+curl -X POST "https://your-opengrc/api/projects/$PROJECT_ID/vendors/$VENDOR_ID/assessments" \\
+  -H "Authorization: Bearer $JWT" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "assessmentDate": "2025-03-01", "result": "satisfactory", "notes": "SOC 2 Type II reviewed" }'
+\`\`\`
+
+**Audit tracking**
+
+For formal internal or external audits (3PAO, ISO surveillance, SOC 2):
+
+\`\`\`bash
+# Create an audit
+curl -X POST "https://your-opengrc/api/projects/$PROJECT_ID/audits" \\
+  -H "Authorization: Bearer $JWT" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "title": "FedRAMP 3PAO Annual", "type": "3pao", "status": "planned", "startDate": "2025-06-01" }'
+
+# Record a finding against the audit
+curl -X POST "https://your-opengrc/api/projects/$PROJECT_ID/audits/$AUDIT_ID/findings" \\
+  -H "Authorization: Bearer $JWT" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "title": "AC-2: Stale service accounts", "severity": "moderate", "status": "open" }'
+\`\`\`
+
+Audit findings can generate POA&M items and link to the risk register.
+
+**Incident-to-control mapping**
+
+When logging incidents, map them to affected controls for root cause tracking:
+
+\`\`\`bash
+curl -X POST "https://your-opengrc/api/projects/$PROJECT_ID/incidents" \\
+  -H "Authorization: Bearer $JWT" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "title": "Unauthorized access attempt", "severity": "P2", "affectedControls": ["AC-2", "SI-4"] }'
+\`\`\`
+
+This creates the feedback loop: incident → affected controls → gap analysis → POA&M → remediation.
+
+**Evidence freshness heatmap**
+
+Monitor which controls have stale evidence before it becomes an assessment finding:
+
+\`\`\`bash
+curl -s "https://your-opengrc/api/projects/$PROJECT_ID/evidence-freshness" \\
+  -H "Authorization: Bearer $JWT" | jq .
+\`\`\`
+
+Returns a per-control breakdown of evidence age, helping you target re-collection where it matters.
+
+**Dashboard reports**
+
+Three built-in report endpoints for different audiences:
+
+\`\`\`bash
+# KPI summary for compliance leads
+curl "https://your-opengrc/api/reports/compliance-summary?projectId=$PROJECT_ID"
+
+# Risk heatmap for risk committees
+curl "https://your-opengrc/api/reports/risk-posture?projectId=$PROJECT_ID"
+
+# Combined brief for executives / AO
+curl "https://your-opengrc/api/reports/executive-briefing?projectId=$PROJECT_ID"
+\`\`\`
+
+**Unified search**
+
+Search across checklist items, evidence, risks, and policies in one call:
+
+\`\`\`bash
+curl "https://your-opengrc/api/search?q=encryption&projectId=$PROJECT_ID&types=checklist,evidence,risk,policy&limit=20" \\
+  -H "Authorization: Bearer $JWT"
+\`\`\`
+
+Or via MCP: \`opengrc_search_v1\` with the same parameters.`,
     },
   ],
 };

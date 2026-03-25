@@ -465,7 +465,7 @@ Produce a monthly report covering vulnerability posture (counts, SLAs, MTTR), ac
 
 1. Configure **connectors** for scanner, IdP, CSPM → auto-push evidence.
 2. Enable **compliance snapshot cron** → captures trend data.
-3. Use **CI/CD pipeline gate** (`/pipeline/readiness-check`) → fail deploys below threshold.
+3. Use **CI/CD pipeline gate** (`POST /pipeline/check`) → fail deploys below threshold. Embed the compliance badge (`GET /pipeline/badge/:projectId`) in your repo README.
 4. Use **MCP `compliance_agent_autopilot_v1`** for end-to-end gap-to-evidence flow.
 
 ---
@@ -664,6 +664,68 @@ This scans workspace → maps gaps → creates project → generates fixes → l
 | **On demand** | MCP: gap brief, OSCAL export, auto-scope | Assessment readiness |
 
 The result: evidence flows in continuously, readiness stays above threshold, gaps are detected within hours, and assessor preparation is a report export — not a scramble.
+
+---
+
+## 12. Additional OpenGRC capabilities
+
+### Per-project integration credentials
+
+Create scoped API keys per project instead of sharing a global `INTEGRATION_API_KEY`:
+
+```bash
+POST /integrations/v1/projects/:projectId/credentials
+# Returns: { credentialId, key, projectId }
+```
+
+### Compliance badge
+
+Embed a live readiness badge in your README: `GET /pipeline/badge/:projectId`
+
+### Full OSCAL export suite
+
+| Format | Endpoint |
+|--------|---------|
+| OSCAL SSP | `GET /projects/:id/export?format=oscal-ssp` |
+| OSCAL POA&M | `GET /projects/:id/poam?format=oscal-poam` |
+| OSCAL Assessment Plan | `GET /projects/:id/export?format=oscal-ap` |
+| OSCAL Assessment Results | `GET /projects/:id/export?format=oscal-ar` |
+
+Also: JSON, Markdown, CSV for POA&M.
+
+### OSCAL SSP import
+
+Bootstrap a project from an existing SSP: `POST /projects/:id/oscal/import-ssp`
+
+### Vendor management
+
+Track third-party vendors, record assessments, map to controls. Critical for SR and SA families.
+
+### Audit tracking
+
+Formal audit records (internal, external, 3PAO) with findings (P1-P4) and evidence requests.
+
+### Incident-to-control mapping
+
+Log incidents and link to affected controls for root cause feedback into gap analysis.
+
+### Evidence freshness heatmap
+
+`GET /projects/:id/evidence-freshness` — per-control evidence age breakdown.
+
+### Reports
+
+- `GET /reports/compliance-summary` — KPIs for compliance leads
+- `GET /reports/risk-posture` — risk heatmap for committees
+- `GET /reports/executive-briefing` — combined brief for AO/executives
+
+### Unified search
+
+`GET /search?q=...&types=checklist,evidence,risk,policy` — search across all entities.
+
+### Internal controls & cross-framework mapping
+
+Create organizational controls, map to requirements from multiple frameworks, use `GET /catalog/cross-map` to identify overlap and build evidence once for FedRAMP + SOC 2 + ISO 27001.
 
 ---
 

@@ -98,6 +98,88 @@ Version and schema information appear on \`GET /health\`; operational detail (pa
     },
 
     {
+      id: 'grc-modules',
+      title: 'GRC modules',
+      body: `Beyond the checklist, OpenGRC ships several in-app modules that cover the full GRC lifecycle. Each is scoped to a project (authorization boundary).
+
+### Risks
+
+A full risk register with likelihood/impact scoring, inherent and residual risk calculation, and treatment tracking.
+
+- Create risks, link them to checklist items or internal controls as mitigations.
+- Risk acceptance workflow: submit for approval, step-by-step review, documented approval or rejection.
+- Risk heatmap visualization at \`GET /reports/risk-posture?projectId=...\`.
+
+### Policies
+
+Policy lifecycle management: draft → in review → approved → published → retired.
+
+- **Versioning:** each publish creates a snapshot. View history at \`GET /policies/:id/versions\`.
+- **Attestation:** request sign-offs from personnel via \`POST /policies/:id/attest/request\`, then collect responses. Tracks who attested and when.
+- **Control mappings:** link policies to catalog requirements or internal controls via \`POST /policies/:id/control-mappings\`.
+- The policy cron schedules attestation reminders automatically.
+
+### Audits
+
+Track internal audits, external assessments, and 3PAO engagements.
+
+- Audit types: \`internal\`, \`external\`, \`3pao\`.
+- Statuses: \`planned\` → \`fieldwork\` → \`draft_report\` → \`final_report\` → \`closed\`.
+- Record **findings** (severity P1–P4, status open/remediation/closed/risk_accepted) and **evidence requests** against each audit.
+
+### Vendors
+
+Third-party vendor inventory and assessment tracking — critical for supply chain and inherited controls.
+
+- Register vendors with category and criticality.
+- Record periodic assessments with results and notes.
+- Vendor-control mappings link vendors to the internal controls they support.
+
+### Incidents
+
+Incident tracking scoped to the authorization boundary.
+
+- Severity levels: P1 (critical) through P4 (informational).
+- Link incidents to affected controls for root-cause feedback into your gap analysis.
+
+### Assets
+
+Asset inventory for the authorization boundary.
+
+- Track assets scoped to projects.
+- Asset-control mappings link inventory items to the controls that protect them.
+
+### Internal controls & cross-framework mapping
+
+**Internal controls** are your organization's control implementations — the "how we do it" mapped to the "what the framework requires."
+
+- Create internal controls with code, title, and description.
+- Map them to catalog requirements from any framework (FedRAMP, NIST CSF 2.0, SOC 2, ISO 27001, CMMC 2.0, HIPAA).
+- **Cross-framework mapping** at \`GET /catalog/cross-map?sourceFramework=...&targetFramework=...\` shows which internal controls satisfy requirements across multiple frameworks — build evidence once, map it everywhere.
+
+### Reports & exports
+
+| Report | Endpoint | Output |
+|--------|---------|--------|
+| Compliance summary | \`GET /reports/compliance-summary\` | KPIs: readiness %, control counts, status breakdown |
+| Risk posture | \`GET /reports/risk-posture\` | Risk heatmap with scoring |
+| Executive briefing | \`GET /reports/executive-briefing\` | Combined summary + heatmap for leadership |
+| OSCAL SSP | \`GET /projects/:id/export?format=oscal-ssp\` | Machine-readable system security plan |
+| OSCAL POA&M | \`GET /projects/:id/poam?format=oscal-poam\` | Machine-readable plan of action |
+| OSCAL Assessment Plan | \`GET /projects/:id/export?format=oscal-ap\` | Assessment methodology and scope |
+| OSCAL Assessment Results | \`GET /projects/:id/export?format=oscal-ar\` | Findings and determinations |
+| JSON/Markdown/CSV | \`GET /projects/:id/export\` or \`/poam\` | Flexible formats for sharing |
+
+### Search
+
+Unified search across checklist items, evidence, risks, and policies: \`GET /search?q=...&types=checklist,evidence,risk,policy\`.
+
+### Dashboard
+
+Project dashboards show readiness %, compliance trends (from snapshots), upcoming deadlines, evidence freshness heatmap, and continuous monitoring summary. Compliance snapshot cron captures posture metrics on a schedule for trend analysis.`,
+    },
+
+    {
       id: 'mcp-and-automation',
       title: 'MCP & automation',
       body: `The **MCP server** exposes tools that call the same API the UI uses. Configure base URL, token, and tool allowlists from **MCP Connect** (\`/mcp\`).
@@ -140,6 +222,8 @@ Backups via \`POST /health/backup\` apply to SQLite deployments (see \`AGENTS.md
 | \`docs/MCP_SERVER.md\` | Tool names and environment variables |
 | \`ARCHITECTURE.md\` | Nest API, Next.js UI, MCP layout |
 | \`docs/PRODUCTION.md\` | Hardening and deployment notes |
+| \`docs/CONTROLS_PROGRAM.md\` | Controls program playbook (FedRAMP 20x best practices, automation) |
+| \`docs/AUTO_SCOPING.md\` | Auto-scoping endpoints and review workflow |
 
 Copy sections of *this* guide into your SSP appendices or onboarding wiki—the Markdown is yours.`,
     },
