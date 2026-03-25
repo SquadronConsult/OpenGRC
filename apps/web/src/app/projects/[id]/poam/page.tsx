@@ -348,7 +348,7 @@ export default function ProjectPoamPage({
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-hidden rounded-b-xl bg-background" role="img" aria-label="POA&amp;M timeline showing weakness remediation schedule">
+              <div className="overflow-hidden rounded-b-[4px] bg-background" role="img" aria-label="POA&amp;M timeline showing weakness remediation schedule">
               {/* Header row */}
               <div className="grid grid-cols-[220px_1fr] border-b bg-muted/50 px-3 py-2 text-[0.68rem] font-bold uppercase tracking-wider text-muted-foreground">
                 <div>Weakness</div>
@@ -374,10 +374,10 @@ export default function ProjectPoamPage({
                       {row.weaknessName}
                     </div>
                   </div>
-                  <div className="relative h-[18px] overflow-hidden rounded-full bg-muted/30">
+                  <div className="relative h-[18px] overflow-hidden rounded-[4px] bg-muted/30">
                     <div
                       className={cn(
-                        'absolute top-[3px] bottom-[3px] rounded-full opacity-85',
+                        'absolute top-[3px] bottom-[3px] rounded-[4px] opacity-85',
                         sevBarClass(row.adjustedRiskRating),
                       )}
                       style={{

@@ -41,7 +41,7 @@ export function ControlRow({
       <CollapsibleTrigger asChild>
         <div
           className={cn(
-            'flex cursor-pointer items-center gap-3 border-b border-border px-4 py-3 transition-colors hover:bg-accent',
+            'flex cursor-pointer items-center gap-2.5 border-b border-border px-3 py-2.5 transition-colors hover:bg-accent',
             open && 'bg-accent/50',
           )}
         >
@@ -70,7 +70,7 @@ export function ControlRow({
                 e.stopPropagation();
                 onOpenDetail();
               }}
-              className="ml-1 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+              className="ml-1 rounded-[4px] p-1 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
               aria-label="Open detail"
             >
               <ExternalLink size={13} />
@@ -79,7 +79,7 @@ export function ControlRow({
         </div>
       </CollapsibleTrigger>
       <CollapsibleContent className="overflow-hidden transition-all duration-150 ease-out data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
-        <div className="border-b border-border bg-card/50 px-8 py-4">{children}</div>
+        <div className="border-b border-border bg-card/50 px-6 py-3">{children}</div>
       </CollapsibleContent>
     </Collapsible>
   );

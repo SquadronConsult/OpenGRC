@@ -120,7 +120,7 @@ export default function ProjectsPage() {
 
   return (
     <div className="animate-in fade-in duration-300">
-      <div className="flex justify-between items-start gap-4 flex-wrap mb-7">
+      <div className="flex justify-between items-start gap-4 flex-wrap mb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Projects</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -157,7 +157,7 @@ export default function ProjectsPage() {
                   <Label htmlFor="proj-path">FedRAMP Path</Label>
                   <select
                     id="proj-path"
-                    className="flex h-9 w-full rounded-md border border-input bg-card px-3 py-1 text-sm text-foreground shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    className="flex h-8 w-full rounded-[4px] border border-input bg-card px-3 py-1 text-sm text-foreground transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                     value={pathType}
                     onChange={(e) => setPathType(e.target.value as '20x' | 'rev5')}
                   >
@@ -169,7 +169,7 @@ export default function ProjectsPage() {
                   <Label htmlFor="proj-impact">Impact Level</Label>
                   <select
                     id="proj-impact"
-                    className="flex h-9 w-full rounded-md border border-input bg-card px-3 py-1 text-sm text-foreground shadow-xs transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    className="flex h-8 w-full rounded-[4px] border border-input bg-card px-3 py-1 text-sm text-foreground transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                     value={impact}
                     onChange={(e) => setImpact(e.target.value as 'low' | 'moderate' | 'high')}
                   >
@@ -203,12 +203,12 @@ export default function ProjectsPage() {
           {Array.from({ length: 3 }).map((_, i) => (
             <Card key={i} className="p-4">
               <div className="flex items-center gap-3">
-                <Skeleton className="h-10 w-10 rounded-lg" />
+                <Skeleton className="h-8 w-8 rounded-[4px]" />
                 <div className="flex-1 space-y-2">
                   <Skeleton className="h-4 w-40" />
                   <Skeleton className="h-3 w-24" />
                 </div>
-                <Skeleton className="h-8 w-8 rounded-full" />
+                <Skeleton className="h-8 w-8 rounded-[4px]" />
               </div>
             </Card>
           ))}
@@ -226,13 +226,13 @@ export default function ProjectsPage() {
           {list.map((p) => (
             <Card
               key={p.id}
-              className="group flex flex-row items-center justify-between gap-4 p-4 transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-md"
+              className="group flex flex-row items-center justify-between gap-4 p-3"
             >
               <Link
                 href={`/projects/${p.id}`}
                 className="flex flex-1 items-center gap-3 text-inherit no-underline min-w-0"
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[4px] bg-primary/10">
                   <ShieldCheck className="size-5 text-primary" aria-hidden="true" />
                 </div>
                 <div className="min-w-0">

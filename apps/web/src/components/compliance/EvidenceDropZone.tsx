@@ -72,7 +72,7 @@ export function EvidenceDropZone({ onUpload, className, compact }: EvidenceDropZ
   if (uploading) {
     const Icon = done ? CheckCircle2 : Upload;
     return (
-      <div className={cn('rounded-lg border border-border bg-card p-4', className)}>
+      <div className={cn('rounded-[4px] border border-border bg-card p-3', className)}>
         <div className="flex items-center gap-3">
           <Icon size={18} className={cn(done ? 'text-success' : 'text-muted-foreground animate-pulse')} />
           <div className="flex-1">
@@ -104,7 +104,7 @@ export function EvidenceDropZone({ onUpload, className, compact }: EvidenceDropZ
   return (
     <div
       className={cn(
-        'group relative flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-6 text-center transition-colors',
+        'group relative flex flex-col items-center justify-center gap-2 rounded-[4px] border-2 border-dashed px-4 py-4 text-center transition-colors',
         dragOver
           ? 'border-primary bg-primary/5'
           : 'border-border hover:border-primary/40 hover:bg-muted/30',

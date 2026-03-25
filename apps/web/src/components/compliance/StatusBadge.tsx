@@ -60,8 +60,8 @@ export function StatusBadge({ status, size = 'sm', className }: StatusBadgeProps
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border font-semibold uppercase tracking-wide',
-        size === 'sm' ? 'px-2 py-0.5 text-[0.625rem]' : 'px-2.5 py-1 text-xs',
+        'inline-flex items-center gap-1 rounded-[4px] border font-semibold uppercase tracking-wide',
+        size === 'sm' ? 'px-1.5 py-0.5 text-[0.625rem]' : 'px-2 py-0.5 text-xs',
         statusClass,
         className,
       )}

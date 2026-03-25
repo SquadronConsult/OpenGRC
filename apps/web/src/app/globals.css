@@ -3,14 +3,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/*
- * Tailwind v4 theme tokens.
- * Maps existing GRC palette to Tailwind utility classes (bg-primary, text-muted-foreground, etc.)
- * without renaming any legacy CSS custom properties.
- *
- * --color-accent intentionally maps to --surface-hover (not --accent)
- * because shadcn "accent" means "muted hover bg" while our legacy --accent is the brand indigo.
- */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -41,18 +33,17 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-sm: 4px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 4px;
+  --radius-2xl: 4px;
+  --radius-3xl: 4px;
+  --radius-4xl: 4px;
 }
 
 :root {
   --bg: #060a10;
-  --bg-gradient: linear-gradient(135deg, #060a10 0%, #0d1420 100%);
   --surface: #0f1520;
   --surface-raised: #161f2e;
   --surface-hover: #1a2538;
@@ -63,24 +54,13 @@
   --text-dim: #5b6b82;
   --accent: #6366f1;
   --accent-hover: #4f46e5;
-  --accent-glow: rgba(99, 102, 241, 0.15);
-  --accent-subtle: rgba(99, 102, 241, 0.1);
   --success: #22c55e;
-  --success-subtle: rgba(34, 197, 94, 0.1);
   --warn: #f59e0b;
-  --warn-subtle: rgba(245, 158, 11, 0.1);
   --danger: #ef4444;
-  --danger-subtle: rgba(239, 68, 68, 0.1);
-  --radius-sm: 8px;
-  --radius: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
-  --shadow: 0 2px 8px rgba(0,0,0,0.25);
-  --shadow-lg: 0 8px 32px rgba(0,0,0,0.35);
-  --shadow-glow: 0 0 20px rgba(99,102,241,0.08);
-  --transition: 180ms ease;
+  --radius: 4px;
+  --shadow: 0 1px 2px rgba(0,0,0,0.2);
+  --transition: 150ms ease;
 
-  /* shadcn semantic tokens */
   --background: #060a10;
   --foreground: #f0f4f8;
   --card: #0f1520;
@@ -120,7 +100,7 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-    line-height: 1.6;
+    line-height: 1.5;
     font-size: 14px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -128,10 +108,6 @@
   code {
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
   }
-  /*
-   * Native <select> does not always inherit text color (often stays browser grey).
-   * Force readable closed-state text; option list uses light surface + black text for contrast.
-   */
   select {
     color: var(--foreground);
   }
@@ -142,7 +118,6 @@
   }
 }
 
-/* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }

@@ -448,7 +448,7 @@ export default function AutoScopePage({ params }: { params: { id: string } }) {
                     if (i + 1 <= wizardStep) setWizardStep(i + 1);
                   }}
                   className={cn(
-                    'flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors',
+                    'flex items-center gap-1.5 rounded-[4px] px-2 py-0.5 text-xs font-medium transition-colors',
                     wizardStep >= i + 1
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted text-muted-foreground',
@@ -456,7 +456,7 @@ export default function AutoScopePage({ params }: { params: { id: string } }) {
                     i + 1 > wizardStep && 'cursor-default',
                   )}
                 >
-                  <span className="flex size-4 items-center justify-center rounded-full bg-background/20 text-[10px] font-bold">
+                  <span className="flex size-4 items-center justify-center rounded-[4px] bg-background/20 text-[10px] font-bold">
                     {i + 1}
                   </span>
                   {label}
@@ -477,7 +477,7 @@ export default function AutoScopePage({ params }: { params: { id: string } }) {
                 <Label htmlFor="inventoryMode">Cloud Inventory Mode</Label>
                 <select
                   id="inventoryMode"
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground"
+                  className="h-8 w-full rounded-[4px] border border-input bg-background px-3 text-sm text-foreground"
                   value={inventoryMode}
                   onChange={(e) => setInventoryMode(e.target.value as 'metadata' | 'live')}
                 >
@@ -523,7 +523,7 @@ export default function AutoScopePage({ params }: { params: { id: string } }) {
                   <label
                     key={key}
                     className={cn(
-                      'flex items-center gap-2 rounded-md border px-3 py-2 text-sm cursor-pointer transition-colors',
+                      'flex items-center gap-2 rounded-[4px] border px-3 py-2 text-sm cursor-pointer transition-colors',
                       connectorMap[key]
                         ? 'border-primary bg-primary/5 text-foreground'
                         : 'border-input hover:bg-muted/50',
@@ -565,7 +565,7 @@ export default function AutoScopePage({ params }: { params: { id: string } }) {
               </p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {useAws && (
-                  <div className="space-y-3 rounded-lg border border-input p-4">
+                  <div className="space-y-3 rounded-[4px] border border-input p-3">
                     <div className="flex items-center gap-2 text-sm font-medium">
                       <Cloud className="size-4 text-muted-foreground" />
                       AWS
@@ -611,7 +611,7 @@ export default function AutoScopePage({ params }: { params: { id: string } }) {
                   </div>
                 )}
                 {useAzure && (
-                  <div className="space-y-3 rounded-lg border border-input p-4">
+                  <div className="space-y-3 rounded-[4px] border border-input p-3">
                     <div className="flex items-center gap-2 text-sm font-medium">
                       <Globe className="size-4 text-muted-foreground" />
                       Azure
@@ -656,7 +656,7 @@ export default function AutoScopePage({ params }: { params: { id: string } }) {
                   </div>
                 )}
                 {useGcp && (
-                  <div className="space-y-3 rounded-lg border border-input p-4">
+                  <div className="space-y-3 rounded-[4px] border border-input p-3">
                     <div className="flex items-center gap-2 text-sm font-medium">
                       <Cloud className="size-4 text-muted-foreground" />
                       GCP
@@ -674,7 +674,7 @@ export default function AutoScopePage({ params }: { params: { id: string } }) {
                       <Label htmlFor="gcpSaJson">Service Account JSON (optional)</Label>
                       <textarea
                         id="gcpSaJson"
-                        className="min-h-[110px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="min-h-[110px] w-full rounded-[4px] border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         value={gcpServiceAccountJson}
                         onChange={(e) => setGcpServiceAccountJson(e.target.value)}
                         placeholder='{"type":"service_account", ...}'
@@ -793,7 +793,7 @@ export default function AutoScopePage({ params }: { params: { id: string } }) {
                       {preflight.checks.map((c) => (
                         <div
                           key={c.id}
-                          className="rounded-md border border-border bg-muted/30 px-3 py-2.5"
+                          className="rounded-[4px] border border-border bg-muted/30 px-3 py-2.5"
                         >
                           <div className="flex items-center justify-between">
                             <span className="text-sm font-medium">{c.label}</span>
@@ -896,7 +896,7 @@ export default function AutoScopePage({ params }: { params: { id: string } }) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+            className="h-8 rounded-[4px] border border-input bg-background px-3 text-sm text-foreground"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             aria-label="Filter by status"
@@ -908,7 +908,7 @@ export default function AutoScopePage({ params }: { params: { id: string } }) {
             <option value="stale">Stale</option>
           </select>
           <select
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+            className="h-8 rounded-[4px] border border-input bg-background px-3 text-sm text-foreground"
             value={decisionFilter}
             onChange={(e) => setDecisionFilter(e.target.value)}
             aria-label="Filter by decision"
@@ -938,8 +938,8 @@ export default function AutoScopePage({ params }: { params: { id: string } }) {
                 <div className="flex items-center gap-3">
                   <Skeleton className="h-4 w-4" />
                   <Skeleton className="h-4 w-48" />
-                  <Skeleton className="h-5 w-20 rounded-full" />
-                  <Skeleton className="h-5 w-16 rounded-full" />
+                  <Skeleton className="h-5 w-20 rounded-[4px]" />
+                  <Skeleton className="h-5 w-16 rounded-[4px]" />
                 </div>
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-3/4" />
@@ -1038,7 +1038,7 @@ export default function AutoScopePage({ params }: { params: { id: string } }) {
                       <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
                         Explainability details
                       </summary>
-                      <pre className="mt-2 overflow-x-auto rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+                      <pre className="mt-2 overflow-x-auto rounded-[4px] border bg-muted/30 p-2.5 text-xs text-muted-foreground">
                         {JSON.stringify(item.explainability, null, 2)}
                       </pre>
                     </details>

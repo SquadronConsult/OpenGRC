@@ -3,10 +3,10 @@ import McpConnectCard from '@/components/McpConnectCard';
 
 export default function McpConnectPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="space-y-2">
         <h1 className="flex flex-wrap items-center gap-3 text-2xl font-bold tracking-tight text-foreground">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
+          <span className="flex h-8 w-8 items-center justify-center rounded-[4px] bg-primary/15 text-primary">
             <Plug className="h-5 w-5" aria-hidden />
           </span>
           MCP Connect

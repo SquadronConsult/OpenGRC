@@ -86,7 +86,7 @@ function SidebarContent({ pathname }: { pathname: string }) {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    'flex items-center gap-2.5 rounded-lg px-3 py-2 text-[0.82rem] font-medium transition-colors',
+                    'flex items-center gap-2 rounded-[4px] px-2.5 py-1.5 text-[0.82rem] font-medium transition-colors',
                     active
                       ? 'bg-primary/10 font-semibold text-primary'
                       : 'text-muted-foreground hover:bg-accent hover:text-foreground',
@@ -167,7 +167,7 @@ export default function RootLayout({
               <div className="flex-1 md:ml-60">
                 <AuthShell>
                   <MicroGoalBanner className="hidden md:flex" />
-                  <main id="main-content" className="mx-auto max-w-[1440px] px-4 py-6 md:px-8 md:py-8 mt-12 md:mt-0">
+                  <main id="main-content" className="mx-auto max-w-[1440px] px-4 py-4 md:px-6 md:py-6 mt-12 md:mt-0">
                     {children}
                   </main>
                 </AuthShell>

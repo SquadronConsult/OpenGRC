@@ -104,7 +104,7 @@ export function DocsReader() {
     <div className={cn('flex w-full flex-col gap-8 lg:flex-row lg:items-start lg:gap-10', serif.variable)}>
       {/* Outline + doc switcher */}
       <aside className="lg:w-56 xl:w-60 lg:shrink-0 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
-        <div className="space-y-6 rounded-xl border border-border/70 bg-card/40 p-4 backdrop-blur-sm">
+        <div className="space-y-4 rounded-[4px] border border-border/70 bg-card/40 p-4">
           <div className="flex items-center gap-2 text-primary">
             <ScrollText className="size-5" aria-hidden />
             <span className="text-[0.65rem] font-bold uppercase tracking-[0.2em]">Documentation</span>
@@ -120,7 +120,7 @@ export function DocsReader() {
                 type="button"
                 onClick={() => setDoc('opengrc')}
                 className={cn(
-                  'rounded-lg px-3 py-2 text-left text-sm transition-colors',
+                  'rounded-[4px] px-2.5 py-1.5 text-left text-sm transition-colors',
                   slug === 'opengrc'
                     ? 'bg-primary/15 font-semibold text-primary'
                     : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
@@ -132,7 +132,7 @@ export function DocsReader() {
                 type="button"
                 onClick={() => setDoc('controls')}
                 className={cn(
-                  'rounded-lg px-3 py-2 text-left text-sm transition-colors',
+                  'rounded-[4px] px-2.5 py-1.5 text-left text-sm transition-colors',
                   slug === 'controls'
                     ? 'bg-primary/15 font-semibold text-primary'
                     : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
@@ -152,7 +152,7 @@ export function DocsReader() {
               <a
                 href="#intro"
                 className={cn(
-                  'rounded-md px-2 py-1.5 transition-colors',
+                  'rounded-[4px] px-2 py-1.5 transition-colors',
                   activeId === 'intro' ? 'bg-muted/60 text-foreground' : 'text-muted-foreground hover:bg-muted/40 hover:text-foreground',
                 )}
               >
@@ -163,7 +163,7 @@ export function DocsReader() {
                   key={s.id}
                   href={`#${s.id}`}
                   className={cn(
-                    'rounded-md px-2 py-1.5 transition-colors',
+                    'rounded-[4px] px-2 py-1.5 transition-colors',
                     activeId === s.id ? 'bg-muted/60 text-foreground' : 'text-muted-foreground hover:bg-muted/40 hover:text-foreground',
                   )}
                 >
@@ -183,7 +183,7 @@ export function DocsReader() {
       {/* Main paper */}
       <article
         className={cn(
-          'min-w-0 flex-1 rounded-2xl border border-border/60 bg-gradient-to-b from-card/80 to-card/30 px-5 py-8 shadow-sm sm:px-8 md:px-12 md:py-12 lg:px-14',
+          'min-w-0 flex-1 rounded-[4px] border border-border/60 bg-card px-5 py-6 sm:px-6 md:px-8 md:py-8 lg:px-10',
           'font-[family-name:var(--font-doc-serif)]',
         )}
       >

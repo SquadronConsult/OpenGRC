@@ -208,7 +208,7 @@ export default function PoliciesPage() {
                     />
                   </div>
                   {templates.length > 0 && (
-                    <div className="rounded-lg border border-border p-3">
+                    <div className="rounded-[4px] border border-border p-3">
                       <p className="text-xs font-medium text-muted-foreground mb-2">Templates that will be generated:</p>
                       <div className="flex flex-wrap gap-1.5">
                         {templates.map((t) => (
@@ -283,7 +283,7 @@ export default function PoliciesPage() {
                     <Label htmlFor="pbody">Content (markdown)</Label>
                     <textarea
                       id="pbody"
-                      className="min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      className="min-h-[120px] w-full rounded-[4px] border border-input bg-background px-3 py-2 text-sm"
                       value={content}
                       onChange={(e) => setContent(e.target.value)}
                     />
@@ -321,9 +321,9 @@ export default function PoliciesPage() {
       {/* Policy list */}
       {list === null ? (
         <div className="space-y-2">
-          <Skeleton className="h-16 w-full rounded-lg" />
-          <Skeleton className="h-16 w-full rounded-lg" />
-          <Skeleton className="h-16 w-full rounded-lg" />
+          <Skeleton className="h-16 w-full rounded-[4px]" />
+          <Skeleton className="h-16 w-full rounded-[4px]" />
+          <Skeleton className="h-16 w-full rounded-[4px]" />
         </div>
       ) : list.length === 0 ? (
         <EmptyState
@@ -337,10 +337,10 @@ export default function PoliciesPage() {
             <button
               key={p.id}
               onClick={() => router.push(`/policies/${p.id}`)}
-              className="flex w-full flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-4 py-3 text-left transition-colors hover:bg-muted/50"
+              className="flex w-full flex-wrap items-center justify-between gap-2 rounded-[4px] border border-border bg-card px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[4px] bg-primary/10">
                   <FileText className="h-4 w-4 text-primary" />
                 </div>
                 <div className="min-w-0">
@@ -382,7 +382,7 @@ export default function PoliciesPage() {
               {templates.map((t) => (
                 <div
                   key={t.slug}
-                  className="rounded-md border border-border/60 px-3 py-2 text-sm"
+                  className="rounded-[4px] border border-border/60 px-3 py-2 text-sm"
                 >
                   <div className="font-medium truncate">{t.title}</div>
                   <div className="text-xs text-muted-foreground">

@@ -32,7 +32,7 @@ function StatusDot({ ok }: { ok: boolean }) {
   return (
     <span className="flex items-center gap-1.5 text-xs font-medium">
       <span
-        className={`h-2 w-2 rounded-full ${ok ? 'bg-emerald-500' : 'bg-destructive'}`}
+        className={`h-2 w-2 rounded-[4px] ${ok ? 'bg-emerald-500' : 'bg-destructive'}`}
         aria-hidden="true"
       />
       {ok ? 'Online' : 'Unavailable'}
@@ -55,7 +55,7 @@ function OpsCard({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+          <div className="flex h-7 w-7 items-center justify-center rounded-[4px] bg-primary/10">
             <Icon className="size-4 text-primary" />
           </div>
           <CardTitle className="text-sm">{title}</CardTitle>
@@ -86,7 +86,7 @@ export default function LocalOpsPage() {
 
   return (
     <div className="animate-in fade-in duration-300">
-      <div className="flex justify-between items-start gap-4 flex-wrap mb-7">
+      <div className="flex justify-between items-start gap-4 flex-wrap mb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Operations</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -103,7 +103,7 @@ export default function LocalOpsPage() {
             <Card key={i}>
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
-                  <Skeleton className="h-8 w-8 rounded-md" />
+                  <Skeleton className="h-7 w-7" />
                   <Skeleton className="h-4 w-24" />
                 </div>
               </CardHeader>

@@ -447,7 +447,7 @@ export default function ProjectRiskPage({ params }: { params: { id: string } }) 
                         type="button"
                         onClick={() => setFilterBucket(active ? null : key)}
                         className={cn(
-                          'min-h-9 rounded-md text-xs font-bold transition-all',
+                          'min-h-8 rounded-[4px] text-xs font-bold transition-all',
                           heatCellClass(band),
                           n === 0 && 'opacity-25',
                           active
@@ -595,7 +595,7 @@ export default function ProjectRiskPage({ params }: { params: { id: string } }) 
                 </TableBody>
               </Table>
               <select
-                className="h-9 max-w-xs rounded-md border border-input bg-background px-3 text-sm text-foreground"
+                className="h-8 max-w-xs rounded-[4px] border border-input bg-background px-3 text-sm text-foreground"
                 defaultValue=""
                 aria-label="Link checklist item"
                 onChange={(e) => {
@@ -630,7 +630,7 @@ export default function ProjectRiskPage({ params }: { params: { id: string } }) 
                 {detail.internalControlMitigations.length === 0 && <li>None linked</li>}
               </ul>
               <select
-                className="h-9 max-w-sm rounded-md border border-input bg-background px-3 text-sm text-foreground"
+                className="h-8 max-w-sm rounded-[4px] border border-input bg-background px-3 text-sm text-foreground"
                 defaultValue=""
                 aria-label="Link internal control"
                 onChange={(e) => {
@@ -724,7 +724,7 @@ export default function ProjectRiskPage({ params }: { params: { id: string } }) 
               <Label htmlFor="risk-description">Description</Label>
               <textarea
                 id="risk-description"
-                className="flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="flex min-h-20 w-full rounded-[4px] border border-input bg-background px-3 py-2 text-sm"
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
               />
@@ -812,7 +812,7 @@ export default function ProjectRiskPage({ params }: { params: { id: string } }) 
               <Label htmlFor="risk-status">Status</Label>
               <select
                 id="risk-status"
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground"
+                className="h-8 w-full rounded-[4px] border border-input bg-background px-3 text-sm text-foreground"
                 value={form.status}
                 onChange={(e) => setForm({ ...form, status: e.target.value })}
               >

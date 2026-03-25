@@ -115,7 +115,7 @@ export default function Home() {
     return (
       <div className="space-y-6">
         <div className="flex items-start gap-6">
-          <Skeleton className="h-40 w-40 rounded-full" />
+          <Skeleton className="h-40 w-40 rounded-[4px]" />
           <div className="flex-1 space-y-3">
             <Skeleton className="h-6 w-48" />
             <Skeleton className="h-4 w-96" />
@@ -123,10 +123,10 @@ export default function Home() {
         </div>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-xl" />
+            <Skeleton key={i} className="h-24 rounded-[4px]" />
           ))}
         </div>
-        <Skeleton className="h-48 rounded-xl" />
+        <Skeleton className="h-48 rounded-[4px]" />
       </div>
     );
   }
@@ -145,15 +145,15 @@ export default function Home() {
       )}
       {/* Top row: Readiness gauge + Quick actions */}
       <div className="flex flex-col items-start gap-6 md:flex-row">
-        <Card className="flex flex-col items-center px-8 py-6">
+        <Card className="flex flex-col items-center px-6 py-4">
           <ReadinessGauge value={stats?.readinessPct ?? 0} size={140} />
           <p className="mt-2 text-xs text-muted-foreground">
             {stats?.totalControls ?? 0} controls across {stats?.projects ?? 0} project(s)
           </p>
         </Card>
 
-        <Card className="flex-1 transition-transform duration-150 hover:-translate-y-0.5">
-          <CardHeader className="pb-3">
+        <Card className="flex-1">
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold">Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-2">
@@ -176,8 +176,8 @@ export default function Home() {
       {/* Status summary cards */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {statCards.map((sc) => (
-          <Card key={sc.key} className="transition-colors hover:border-primary/30">
-            <CardContent className="flex items-center gap-3 p-4">
+          <Card key={sc.key}>
+            <CardContent className="flex items-center gap-3 p-3">
               <sc.icon size={20} className={sc.color} aria-hidden="true" />
               <div>
                 <div className="text-2xl font-bold tabular-nums">
@@ -204,13 +204,13 @@ export default function Home() {
               stats.upcomingDeadlines.slice(0, 5).map((d) => (
                 <div
                   key={d.itemId}
-                  className="flex items-center gap-3 rounded-lg border border-border p-2.5 text-sm"
+                  className="flex items-center gap-3 overflow-hidden rounded-[4px] border border-border p-2 text-sm"
                 >
-                  <div className="min-w-0 flex-1">
-                    <span className="mr-2 font-mono text-xs text-muted-foreground">
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <div className="truncate font-mono text-xs text-muted-foreground">
                       {d.controlRef}
-                    </span>
-                    <span className="truncate text-foreground">{d.controlName}</span>
+                    </div>
+                    <div className="truncate text-foreground">{d.controlName}</div>
                   </div>
                   <DeadlineChip dueDate={d.dueDate} />
                 </div>
@@ -259,9 +259,9 @@ export default function Home() {
 
       {/* MCP — primary setup lives on /mcp (sidebar) */}
       <Card className="border-primary/25 bg-primary/5">
-        <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <CardContent className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
-            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[4px] bg-primary/15 text-primary">
               <Plug className="h-4 w-4" aria-hidden />
             </span>
             <div>

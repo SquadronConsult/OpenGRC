@@ -229,7 +229,7 @@ export default function PolicyDetailPage() {
             </CardHeader>
             <CardContent>
               <textarea
-                className="min-h-[500px] w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm leading-relaxed"
+                className="min-h-[500px] w-full rounded-[4px] border border-input bg-background px-3 py-2 font-mono text-sm leading-relaxed"
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
               />
@@ -273,7 +273,7 @@ export default function PolicyDetailPage() {
               ) : (
                 <div className="space-y-3">
                   {versions.map((v) => (
-                    <div key={v.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-4 py-3">
+                    <div key={v.id} className="flex flex-wrap items-center justify-between gap-2 rounded-[4px] border border-border px-3 py-2.5">
                       <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
                         <div>
@@ -314,7 +314,7 @@ export default function PolicyDetailPage() {
                 <div className="grid gap-1">
                   <Label>Status</Label>
                   <select
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                    className="flex h-8 w-full rounded-[4px] border border-input bg-background px-3 py-1 text-sm"
                     value={status}
                     onChange={(e) => setStatus(e.target.value)}
                   >

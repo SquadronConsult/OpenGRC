@@ -80,7 +80,7 @@ export function MicroGoalBanner({ className }: MicroGoalBannerProps) {
           saveGoal(updated);
           setGoal(updated);
         }}
-        className="ml-auto rounded-md p-1 text-muted-foreground hover:text-foreground"
+        className="ml-auto rounded-[4px] p-1 text-muted-foreground hover:text-foreground"
         aria-label="Dismiss goal banner"
       >
         <X size={12} />

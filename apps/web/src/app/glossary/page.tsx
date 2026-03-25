@@ -70,7 +70,7 @@ export default function GlossaryPage() {
       {loading ? (
         <div className="grid gap-2">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-20 w-full rounded-xl" />
+            <Skeleton key={i} className="h-20 w-full rounded-[4px]" />
           ))}
         </div>
       ) : items.length === 0 ? (

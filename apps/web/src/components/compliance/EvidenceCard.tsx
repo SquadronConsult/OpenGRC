@@ -38,11 +38,11 @@ export function EvidenceCard({
   return (
     <div
       className={cn(
-        'flex items-center gap-3 rounded-lg border border-border bg-card p-3 transition-colors hover:border-primary/30',
+        'flex items-center gap-3 rounded-[4px] border border-border bg-card p-2.5 transition-colors hover:border-primary/30',
         className,
       )}
     >
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[4px] bg-muted">
         <Icon size={16} className="text-muted-foreground" />
       </div>
 
@@ -66,7 +66,7 @@ export function EvidenceCard({
       {onDelete && (
         <button
           onClick={() => onDelete(id)}
-          className="ml-1 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+          className="ml-1 rounded-[4px] p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
           aria-label={`Delete ${filename}`}
         >
           <Trash2 size={14} />

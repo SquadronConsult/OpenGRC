@@ -231,7 +231,7 @@ export default function ProjectDetailPage({
         Projects
       </Link>
 
-      <div className="flex justify-between items-start gap-4 flex-wrap mb-6">
+      <div className="flex justify-between items-start gap-4 flex-wrap mb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
             Project Checklist
@@ -490,7 +490,7 @@ export default function ProjectDetailPage({
                 </TableCell>
                 <TableCell className="align-top">
                   <select
-                    className="h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground"
+                    className="h-8 rounded-[4px] border border-input bg-background px-2 text-sm text-foreground"
                     value={i.status}
                     onChange={(e) => setStatus(i.id, e.target.value)}
                     aria-label="Compliance status"

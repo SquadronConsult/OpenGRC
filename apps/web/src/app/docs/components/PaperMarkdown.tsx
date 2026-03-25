@@ -28,14 +28,14 @@ function PreWithCopy({ children, className, ...props }: ComponentProps<'pre'>) {
 
   return (
     <div className="group relative my-5">
-      <pre ref={ref} className={cn('overflow-x-auto rounded-lg border border-border/80 bg-[#070b10] p-4 pr-14 text-[0.85rem] leading-relaxed text-[#e2e8f0]', className)} {...props}>
+      <pre ref={ref} className={cn('overflow-x-auto rounded-[4px] border border-border/80 bg-[#070b10] p-3 pr-14 text-[0.85rem] leading-relaxed text-[#e2e8f0]', className)} {...props}>
         {children}
       </pre>
       <Button
         type="button"
         variant="secondary"
         size="icon"
-        className="absolute right-2 top-2 h-8 w-8 opacity-0 shadow-sm transition-opacity group-hover:opacity-100"
+        className="absolute right-2 top-2 h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100"
         onClick={copy}
         aria-label="Copy code block"
       >
@@ -96,7 +96,7 @@ const paperComponents: Components = {
   ),
   hr: ({ className, ...props }) => <hr className={cn('my-10 border-border/60', className)} {...props} />,
   table: ({ className, ...props }) => (
-    <div className="my-6 overflow-x-auto rounded-lg border border-border/80">
+    <div className="my-6 overflow-x-auto rounded-[4px] border border-border/80">
       <table className={cn('w-full min-w-[20rem] border-collapse text-sm', className)} {...props} />
     </div>
   ),

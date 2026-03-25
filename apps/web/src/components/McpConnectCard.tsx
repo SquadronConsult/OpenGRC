@@ -121,7 +121,7 @@ export default function McpConnectCard() {
               Use server JSON in Cursor&apos;s &quot;Add MCP Server&quot; dialog. Use workspace JSON in
               <code className="ml-1 rounded bg-muted px-1 py-0.5 text-xs text-primary">.cursor/mcp.json</code>.
             </p>
-            <pre className="overflow-x-auto rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">{serverJson}</pre>
+            <pre className="overflow-x-auto rounded-[4px] border border-border bg-background p-2.5 text-xs text-muted-foreground">{serverJson}</pre>
           </div>
         </details>
 
@@ -129,7 +129,7 @@ export default function McpConnectCard() {
           <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground transition-colors">
             Show one-click install deeplink
           </summary>
-          <pre className="mt-2 overflow-x-auto rounded-md border border-border bg-background p-3 text-xs text-muted-foreground break-all">{installLink}</pre>
+          <pre className="mt-2 overflow-x-auto rounded-[4px] border border-border bg-background p-2.5 text-xs text-muted-foreground break-all">{installLink}</pre>
         </details>
 
         {status && (
