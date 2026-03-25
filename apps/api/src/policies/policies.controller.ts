@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PolicyService } from './policy.service';
 import { CreatePolicyDto } from './dto/create-policy.dto';
 import { UpdatePolicyDto } from './dto/update-policy.dto';
+import { POLICY_TEMPLATES, getTemplateBySlug } from './policy-templates';
 
 @ApiTags('policies')
 @Controller('policies')
@@ -32,6 +33,28 @@ export class PoliciesController {
     return this.policies.list(req.user.userId, req.user.role, projectId, status);
   }
 
+  @Get('templates')
+  @ApiOperation({ summary: 'List available policy templates' })
+  async listTemplates() {
+    return POLICY_TEMPLATES.map((t) => ({
+      slug: t.slug,
+      title: t.title,
+      category: t.category,
+      controlFamilies: t.controlFamilies,
+    }));
+  }
+
+  @Get('templates/:slug')
+  @ApiOperation({ summary: 'Get a single policy template with full content' })
+  async getTemplate(@Param('slug') slug: string) {
+    const tpl = getTemplateBySlug(slug);
+    if (!tpl)
+      throw new (await import('@nestjs/common')).NotFoundException(
+        `Template "${slug}" not found`,
+      );
+    return tpl;
+  }
+
   @Post()
   @ApiOperation({ summary: 'Create policy' })
   async create(
@@ -39,6 +62,30 @@ export class PoliciesController {
     @Body() dto: CreatePolicyDto,
   ) {
     return this.policies.create(req.user.userId, req.user.role, dto);
+  }
+
+  @Post('generate')
+  @ApiOperation({
+    summary: 'Generate policies from templates for a project',
+  })
+  async generate(
+    @Req() req: { user: { userId: string; role: string } },
+    @Body()
+    body: {
+      projectId: string;
+      slugs?: string[];
+      organizationName?: string;
+      systemName?: string;
+    },
+  ) {
+    return this.policies.generateFromTemplates(
+      req.user.userId,
+      req.user.role,
+      body.projectId,
+      body.slugs,
+      body.organizationName,
+      body.systemName,
+    );
   }
 
   @Get(':id')

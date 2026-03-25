@@ -15,6 +15,7 @@ import { AuditService } from '../audit/audit.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreatePolicyDto } from './dto/create-policy.dto';
 import { UpdatePolicyDto } from './dto/update-policy.dto';
+import { POLICY_TEMPLATES, getTemplateBySlug } from './policy-templates';
 
 @Injectable()
 export class PolicyService {
@@ -245,6 +246,63 @@ export class PolicyService {
     await this.attestations.save(row);
     await this.audit.log(userId, 'policy.attest', 'policy', id, { acknowledge });
     return row;
+  }
+
+  async generateFromTemplates(
+    userId: string,
+    role: string,
+    projectId: string,
+    slugs?: string[],
+    organizationName?: string,
+    systemName?: string,
+  ): Promise<{ created: Policy[]; skipped: string[] }> {
+    await this.projects.assertAccess(projectId, userId, role);
+
+    const templates = slugs?.length
+      ? slugs.map((s) => getTemplateBySlug(s)).filter(Boolean) as typeof POLICY_TEMPLATES
+      : [...POLICY_TEMPLATES];
+
+    // Check which templates already have policies in this project (by title match)
+    const existing = await this.policies.find({ where: { projectId } });
+    const existingTitles = new Set(existing.map((p) => p.title.toLowerCase()));
+
+    const created: Policy[] = [];
+    const skipped: string[] = [];
+
+    for (const tpl of templates) {
+      if (existingTitles.has(tpl.title.toLowerCase())) {
+        skipped.push(tpl.slug);
+        continue;
+      }
+
+      let content = tpl.content;
+      if (organizationName) {
+        content = content.replace(/\[Organization Name\]/g, organizationName);
+      }
+      if (systemName) {
+        content = content.replace(/\[System Name\]/g, systemName);
+      }
+
+      const row = this.policies.create({
+        projectId,
+        title: tpl.title,
+        version: '1.0.0',
+        status: 'draft' as const,
+        category: tpl.category,
+        content,
+        ownerUserId: userId,
+      });
+      await this.policies.save(row);
+      created.push(row);
+    }
+
+    await this.audit.log(userId, 'policy.generate_from_templates', 'project', projectId, {
+      requested: templates.map((t) => t.slug),
+      createdCount: created.length,
+      skippedCount: skipped.length,
+    });
+
+    return { created, skipped };
   }
 
   async expirePendingAttestations() {
